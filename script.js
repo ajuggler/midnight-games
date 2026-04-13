@@ -24,6 +24,9 @@ const arrowColors = {
   1: "#1357d8",
 };
 
+const gridCenters = centers();
+const arrowDirections = [...defaultDirs];
+
 function centers(n = GRID_SIZE) {
   const points = [];
 
@@ -95,7 +98,7 @@ function drawArrow(ctx, center, directionIndex, paletteIndex = 0) {
   ctx.fill();
 }
 
-function renderGrid(ctx, n = GRID_SIZE) {
+function renderGrid(ctx, directionsState, points = gridCenters) {
   ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
   ctx.fillStyle = "#f1ead0";
   ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -105,21 +108,79 @@ function renderGrid(ctx, n = GRID_SIZE) {
   ctx.lineJoin = "round";
   ctx.lineWidth = 2;
 
-  const points = centers(n);
-
   points.forEach((point) => {
     drawPolygon(ctx, squarePoints(point));
   });
 
   points.forEach((point, index) => {
-    drawArrow(ctx, point, defaultDirs[index], 0);
+    drawArrow(ctx, point, directionsState[index], 0);
   });
+}
+
+function getCanvasCoordinates(event, canvas) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+
+  return {
+    x: (event.clientX - rect.left) * scaleX,
+    y: (event.clientY - rect.top) * scaleY,
+  };
+}
+
+function findCellIndex(point) {
+  if (
+    point.x < 0 ||
+    point.y < 0 ||
+    point.x >= CANVAS_SIZE ||
+    point.y >= CANVAS_SIZE
+  ) {
+    return -1;
+  }
+
+  const column = Math.floor(point.x / CELL_SIZE);
+  const row = Math.floor(point.y / CELL_SIZE);
+
+  if (
+    column < 0 ||
+    column >= GRID_SIZE ||
+    row < 0 ||
+    row >= GRID_SIZE
+  ) {
+    return -1;
+  }
+
+  return column * GRID_SIZE + row;
+}
+
+function cycleDirectionAt(index) {
+  if (index < 0 || index >= arrowDirections.length) {
+    return;
+  }
+
+  arrowDirections[index] = (arrowDirections[index] + 1) % 4;
+}
+
+function handleCanvasClick(event, canvas, ctx) {
+  const point = getCanvasCoordinates(event, canvas);
+  const cellIndex = findCellIndex(point);
+
+  if (cellIndex === -1) {
+    return;
+  }
+
+  cycleDirectionAt(cellIndex);
+  renderGrid(ctx, arrowDirections);
 }
 
 function init() {
   const canvas = document.getElementById("compass-canvas");
   const ctx = canvas.getContext("2d");
-  renderGrid(ctx);
+
+  renderGrid(ctx, arrowDirections);
+  canvas.addEventListener("click", (event) => {
+    handleCanvasClick(event, canvas, ctx);
+  });
 }
 
 init();
