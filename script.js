@@ -113,8 +113,19 @@ function renderGrid(ctx, directionsState, points = gridCenters) {
   });
 
   points.forEach((point, index) => {
-    drawArrow(ctx, point, directionsState[index], 0);
+    const paletteIndex = Number(directionsState[index] !== defaultDirs[index]);
+    drawArrow(ctx, point, directionsState[index], paletteIndex);
   });
+}
+
+function countModifiedArrows(directionsState) {
+  return directionsState.reduce((total, direction, index) => {
+    return total + Number(direction !== defaultDirs[index]);
+  }, 0);
+}
+
+function updateModifiedCount(countElement, directionsState) {
+  countElement.textContent = String(countModifiedArrows(directionsState));
 }
 
 function getCanvasCoordinates(event, canvas) {
@@ -161,7 +172,7 @@ function cycleDirectionAt(index) {
   arrowDirections[index] = (arrowDirections[index] + 1) % 4;
 }
 
-function handleCanvasClick(event, canvas, ctx) {
+function handleCanvasClick(event, canvas, ctx, countElement) {
   const point = getCanvasCoordinates(event, canvas);
   const cellIndex = findCellIndex(point);
 
@@ -171,15 +182,18 @@ function handleCanvasClick(event, canvas, ctx) {
 
   cycleDirectionAt(cellIndex);
   renderGrid(ctx, arrowDirections);
+  updateModifiedCount(countElement, arrowDirections);
 }
 
 function init() {
   const canvas = document.getElementById("compass-canvas");
+  const countElement = document.getElementById("modified-count");
   const ctx = canvas.getContext("2d");
 
   renderGrid(ctx, arrowDirections);
+  updateModifiedCount(countElement, arrowDirections);
   canvas.addEventListener("click", (event) => {
-    handleCanvasClick(event, canvas, ctx);
+    handleCanvasClick(event, canvas, ctx, countElement);
   });
 }
 

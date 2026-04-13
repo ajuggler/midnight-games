@@ -66,6 +66,14 @@ h1 {
   color: var(--text-soft);
 }
 
+.counter {
+  margin: 16px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #173b93;
+}
+
 canvas {
   width: min(100%, 500px);
   height: auto;
