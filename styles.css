@@ -1,0 +1,86 @@
+:root {
+  --page-bg:
+    radial-gradient(circle at top, #fff6d8 0%, #f6e9be 35%, #e5d2a0 100%);
+  --card-bg: rgba(255, 252, 242, 0.86);
+  --card-border: rgba(92, 79, 42, 0.14);
+  --text-main: #2d2416;
+  --text-soft: #67583b;
+  --shadow: 0 20px 60px rgba(78, 58, 16, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Georgia", "Times New Roman", serif;
+  background: var(--page-bg);
+  color: var(--text-main);
+}
+
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.card {
+  width: min(100%, 860px);
+  display: grid;
+  gap: 24px;
+  justify-items: center;
+  padding: 28px;
+  border: 1px solid var(--card-border);
+  border-radius: 28px;
+  background: var(--card-bg);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+}
+
+.copy {
+  max-width: 640px;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 0.95;
+}
+
+.description {
+  margin: 14px 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-soft);
+}
+
+canvas {
+  width: min(100%, 500px);
+  height: auto;
+  display: block;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 20px;
+    border-radius: 22px;
+  }
+
+  .description {
+    font-size: 0.95rem;
+  }
+}
