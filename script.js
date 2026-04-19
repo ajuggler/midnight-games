@@ -3,15 +3,17 @@ const CANVAS_SIZE = 500;
 const CELL_SIZE = CANVAS_SIZE / GRID_SIZE;
 const SQUARE_SCALE = CELL_SIZE / Math.sqrt(2);
 const ARROW_SCALE = CELL_SIZE * 0.35;
+const MARKER_COLOR = "rgb(16, 128, 128)";
+const DEFAULT_MARKER = { i: 2, j: 2 };
 
 const defaultDirs = [
-  0, 0, 0, 3, 3,
-  0, 0, 0, 3, 3,
-  1, 1, 1, 3, 3,
-  1, 1, 2, 2, 2,
-  1, 1, 2, 2, 2
+  3, 3, 0, 0, 0,
+  3, 3, 0, 0, 0,
+  3, 3, 1, 1, 1,
+  2, 2, 2, 1, 1,
+  2, 2, 2, 1, 1
 ];
-
+  
 const directions = {
   0: { x: 0, y: -1 },
   1: { x: 1, y: 0 },
@@ -32,7 +34,7 @@ function centers(n = GRID_SIZE) {
 
   for (let i = 0.5; i <= n - 0.5; i += 1) {
     for (let j = 0.5; j <= n - 0.5; j += 1) {
-      points.push({ x: i * CELL_SIZE, y: j * CELL_SIZE });
+      points.push({ x: i * CELL_SIZE, y: (n - j) * CELL_SIZE });
     }
   }
 
@@ -98,6 +100,29 @@ function drawArrow(ctx, center, directionIndex, paletteIndex = 0) {
   ctx.fill();
 }
 
+function marker(cell, radius = 0.05, offset = 0.618) {
+  return {
+    x: (0.5 + cell.i + offset / 2) * CELL_SIZE,
+    y: (0.5 + (GRID_SIZE - 1 - cell.j) + offset / 2) * CELL_SIZE,
+    radius: radius * CELL_SIZE,
+  };
+}
+
+function drawMarker(ctx, cell, radius = 0.05, offset = 0.618) {
+  const markerGeometry = marker(cell, radius, offset);
+
+  ctx.beginPath();
+  ctx.arc(
+    markerGeometry.x,
+    markerGeometry.y,
+    markerGeometry.radius,
+    0,
+    Math.PI * 2
+  );
+  ctx.fillStyle = MARKER_COLOR;
+  ctx.fill();
+}
+
 function renderGrid(ctx, directionsState, points = gridCenters) {
   ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
   ctx.fillStyle = "#f1ead0";
@@ -116,6 +141,11 @@ function renderGrid(ctx, directionsState, points = gridCenters) {
     const paletteIndex = Number(directionsState[index] !== defaultDirs[index]);
     drawArrow(ctx, point, directionsState[index], paletteIndex);
   });
+
+  drawMarker(
+    ctx,
+    { i: DEFAULT_MARKER.i, j: DEFAULT_MARKER.j }
+  );
 }
 
 function countModifiedArrows(directionsState) {
@@ -150,7 +180,7 @@ function findCellIndex(point) {
   }
 
   const column = Math.floor(point.x / CELL_SIZE);
-  const row = Math.floor(point.y / CELL_SIZE);
+  const row = GRID_SIZE - 1 - Math.floor(point.y / CELL_SIZE);
 
   if (
     column < 0 ||
