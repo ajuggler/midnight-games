@@ -26,6 +26,7 @@ type Direction = 0 | 1 | 2 | 3; // 0=N, 1=E, 2=S, 3=W
 type DirectionsGrid = Direction[][];
 
 type Position = [number, number];
+type Vector = [number, number];
 
 type Grids = {
   A?: DirectionsGrid;
@@ -107,6 +108,18 @@ declare module "express-session" {
 }
 
 // --------------------
+// Math helpers
+// --------------------
+
+function mod(n: number, m: number): number {
+  return ((n % m) + m) % m;
+}
+
+function addVector(a: Position, b: Vector): Position {
+  return [mod(a[0] + b[0], 4), mod(a[1] + b[1], 4)];
+}
+
+// --------------------
 // Pure helpers
 // --------------------
 
@@ -131,32 +144,60 @@ function isValidGrid(grid: unknown): grid is DirectionsGrid {
   );
 }
 
-// Placeholder transition for compass reading.
-// ToDo: will replace with real movement/charge logic.
+const directionAsVector: Record<Direction, Vector> = {
+  0: [0, 1],
+  1: [1, 0],
+  2: [0, -1],
+  3: [-1, 0]
+};
+
+// If movement `m` arrives to direction `d`, key `d - m` determines
+// charge increase/decrease.
+const chargeLaw: Record<Direction, number> = {
+  0: 2,
+  1: 1,
+  2: -1,
+  3: 0
+};
+
+function modifyCharge(
+  charge: number,
+  mov: number,
+  dirArrow: number
+): number {
+  const key = mod(dirArrow - mov, 4) as Direction;
+  const inc = chargeLaw[key];
+
+  return Math.max(0, charge + inc);
+}
+
 function applyCompassReading(
   positions: { A: Position; B: Position },
   charges: { A: number; B: number },
   grids: Grids,
   reader: Player,
-  direction: Direction
+  movement: Direction
 ): {
   positions: { A: Position; B: Position };
   charges: { A: number; B: number };
 } {
-  void positions;
-  void grids;
-  void reader;
-  void direction;
-
-  // Placeholder logic (ToDo: will replace).
   const target = otherPlayer(reader);
+  const currentPosition = positions[target];
+  const currentCharge = charges[target];
+  const newPosition = addVector(currentPosition, directionAsVector(movement));
+  const [i, j] = newPosition;
+  const newDirection = grids[target][i][j];
+  const newCharge = modifyCharge(currentCharge, movement, newDirection);
 
   return {
-    positions,
+    positions: {
+      ...positions,
+      [target]: newPosition,
+    },
     charges: {
       ...charges,
-      [target]: charges[target] + 1,
-    },
+      [target]: newCharge
+    }
   };
 }
 

@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
-    "dev": "nodemon --watch src --exec ts-node src/server.ts"
+    "dev": "nodemon --watch src --exec ts-node src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts"
   },
   "dependencies": {
     "express": "^4",
