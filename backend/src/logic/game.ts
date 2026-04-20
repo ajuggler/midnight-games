@@ -368,3 +368,11 @@ export function resetGame(state: ServerState): ResetResult {
     state: initialServerState(),
   }
 }
+
+// DEBUG
+export function forceResetGame(): { ok: true; state: ServerState } {
+  return {
+    ok: true,
+    state: initialServerState(),
+  }
+}

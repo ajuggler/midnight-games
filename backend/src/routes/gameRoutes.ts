@@ -1,6 +1,7 @@
 import { Router } from "express"
 
 import {
+  forceResetGame,
   isDirection,
   isValidGrid,
   joinGame,
@@ -147,6 +148,16 @@ export function createGameRouter(): Router {
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error })
     }
+
+    setServerState(result.state)
+    clearSessions()
+
+    return res.json({ ok: true })
+  })
+
+  // DEBUG
+  router.post("/forcereset", (_req, res) => {
+    const result = forceResetGame()
 
     setServerState(result.state)
     clearSessions()
