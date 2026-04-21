@@ -1,12 +1,14 @@
 export const GRID_SIZE = 5
 export const CANVAS_SIZE = 500
 export const CELL_SIZE = CANVAS_SIZE / GRID_SIZE
+export const MAX_MODIFIED_ARROWS = 9
 const SQUARE_SCALE = CELL_SIZE / Math.sqrt(2)
 const ARROW_SCALE = CELL_SIZE * 0.35
 const MARKER_COLOR = "rgb(16, 128, 128)"
 
 export type Direction = 0 | 1 | 2 | 3
 export type DirectionsState = Direction[]
+export type DirectionsGrid = Direction[][]
 export type Point = {
   x: number
   y: number
@@ -49,11 +51,32 @@ export function countModifiedArrows(directionsState: DirectionsState): number {
   }, 0)
 }
 
+export function gridFromDirections(directionsState: DirectionsState): DirectionsGrid {
+  const grid: DirectionsGrid = []
+
+  for (let i = 0; i < GRID_SIZE; i += 1) {
+    const row: Direction[] = []
+    for (let j = 0; j < GRID_SIZE; j += 1) {
+      row.push(directionsState[i * GRID_SIZE + j])
+    }
+    grid.push(row)
+  }
+
+  return grid
+}
+
 export function cycleDirectionAt(
   directionsState: DirectionsState,
   index: number
 ): DirectionsState {
   if (index < 0 || index >= directionsState.length) {
+    return directionsState
+  }
+
+  const modifiedCount = countModifiedArrows(directionsState)
+  const isCurrentlyDefault = directionsState[index] === defaultDirections[index]
+
+  if (isCurrentlyDefault && modifiedCount >= MAX_MODIFIED_ARROWS) {
     return directionsState
   }
 

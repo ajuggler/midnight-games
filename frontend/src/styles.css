@@ -94,6 +94,13 @@ h1 {
   color: var(--primary);
 }
 
+.legend {
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
 .join-panel {
   width: min(100%, 560px);
   display: grid;
@@ -171,6 +178,12 @@ h1 {
   display: block;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.34);
+}
+
+.board-actions {
+  width: min(100%, 560px);
+  display: flex;
+  justify-content: center;
 }
 
 .status-panel {

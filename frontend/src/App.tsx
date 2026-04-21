@@ -4,6 +4,8 @@ import {
   countModifiedArrows,
   createInitialDirections,
   cycleDirectionAt,
+  gridFromDirections,
+  MAX_MODIFIED_ARROWS,
   type DirectionsState,
 } from "./compass"
 
@@ -26,12 +28,14 @@ export default function App() {
   )
   const [nickname, setNickname] = useState("")
   const [joinStatus, setJoinStatus] = useState<RequestStatus>("idle")
+  const [submitGridStatus, setSubmitGridStatus] = useState<RequestStatus>("idle")
   const [resetStatus, setResetStatus] = useState<RequestStatus>("idle")
   const [message, setMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
 
   async function handleJoin() {
     setJoinStatus("loading")
+    setSubmitGridStatus("idle")
     setResetStatus("idle")
     setMessage("")
     setErrorMessage("")
@@ -62,9 +66,44 @@ export default function App() {
     }
   }
 
+  async function handleSubmitGrid() {
+    setSubmitGridStatus("loading")
+    setJoinStatus("idle")
+    setResetStatus("idle")
+    setMessage("")
+    setErrorMessage("")
+
+    try {
+      const response = await fetch("/submitGrid", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          directions_grid: gridFromDirections(directions),
+        }),
+      })
+
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => ({}))) as ApiError
+        throw new Error(errorPayload.error ?? "Unable to submit the grid")
+      }
+
+      setSubmitGridStatus("success")
+      setMessage("Grid submitted successfully.")
+    } catch (error) {
+      setSubmitGridStatus("error")
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to submit the grid"
+      )
+    }
+  }
+
   async function handleForceReset() {
     setResetStatus("loading")
     setJoinStatus("idle")
+    setSubmitGridStatus("idle")
     setMessage("")
     setErrorMessage("")
 
@@ -95,7 +134,9 @@ export default function App() {
 
   const modifiedCount = countModifiedArrows(directions)
   const isJoinBusy = joinStatus === "loading"
+  const isSubmitBusy = submitGridStatus === "loading"
   const isResetBusy = resetStatus === "loading"
+  const isBusy = isJoinBusy || isSubmitBusy || isResetBusy
 
   return (
     <main className="page">
@@ -108,6 +149,9 @@ export default function App() {
           </p>
           <p className="counter" aria-live="polite">
             Modified arrows: <span>{modifiedCount}</span>
+          </p>
+          <p className="legend">
+            you may now modify up to {MAX_MODIFIED_ARROWS} directions
           </p>
         </div>
 
@@ -128,13 +172,24 @@ export default function App() {
             type="button"
             className="button primary"
             onClick={handleJoin}
-            disabled={isJoinBusy || isResetBusy}
+            disabled={isBusy}
           >
             {isJoinBusy ? "Joining..." : "Join game"}
           </button>
         </div>
 
         <CompassCanvas directions={directions} onCellClick={handleCellClick} />
+
+        <div className="board-actions">
+          <button
+            type="button"
+            className="button primary"
+            onClick={handleSubmitGrid}
+            disabled={isBusy}
+          >
+            {isSubmitBusy ? "Submitting grid..." : "Submit grid"}
+          </button>
+        </div>
 
         <div className="status-panel" aria-live="polite">
           {message ? <p className="status-message success">{message}</p> : null}
@@ -148,7 +203,7 @@ export default function App() {
             type="button"
             className="button secondary"
             onClick={handleForceReset}
-            disabled={isJoinBusy || isResetBusy}
+            disabled={isBusy}
           >
             {isResetBusy ? "Resetting..." : "Force reset"}
           </button>
