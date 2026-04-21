@@ -16,11 +16,17 @@ import {
 
 type RequestStatus = "idle" | "loading" | "success" | "error"
 type PlayerSlot = "A" | "B"
+type PhaseTag =
+  | "StandBy"
+  | "WaitingForSecondPlayer"
+  | "WaitingForGridsSetup"
+  | "InProgress"
+  | "Finished"
 
 type JoinResponse = {
   slot: PlayerSlot
   phase: {
-    tag: string
+    tag: PhaseTag
   }
 }
 
@@ -29,9 +35,14 @@ type ApiError = {
 }
 
 type GameStateResponse = {
-  phase: {
-    tag: string
-  }
+  phase:
+    | {
+        tag: Exclude<PhaseTag, "Finished">
+      }
+    | {
+        tag: "Finished"
+        winner: PlayerSlot
+      }
   players: {
     A?: {
       nickname: string
@@ -62,7 +73,8 @@ export default function App() {
     const storedSlot = window.sessionStorage.getItem("player-slot")
     return storedSlot === "A" || storedSlot === "B" ? storedSlot : null
   })
-  const [phaseTag, setPhaseTag] = useState<string | null>(null)
+  const [phaseTag, setPhaseTag] = useState<PhaseTag | null>(null)
+  const [winnerSlot, setWinnerSlot] = useState<PlayerSlot | null>(null)
   const [players, setPlayers] = useState<GameStateResponse["players"]>({
     A: undefined,
     B: undefined,
@@ -89,6 +101,7 @@ export default function App() {
 
       const payload = (await response.json()) as GameStateResponse
       setPhaseTag(payload.phase.tag)
+      setWinnerSlot(payload.phase.tag === "Finished" ? payload.phase.winner : null)
       setPlayers(payload.players)
       setPositions(payload.positions)
       setCharges(payload.charges)
@@ -113,6 +126,7 @@ export default function App() {
         const payload = (await response.json()) as GameStateResponse
         if (isActive) {
           setPhaseTag(payload.phase.tag)
+          setWinnerSlot(payload.phase.tag === "Finished" ? payload.phase.winner : null)
           setPlayers(payload.players)
           setPositions(payload.positions)
           setCharges(payload.charges)
@@ -268,6 +282,7 @@ export default function App() {
       setChosenNickname("")
       setPlayerSlot(null)
       setPhaseTag("StandBy")
+      setWinnerSlot(null)
       setPlayers({
         A: undefined,
         B: undefined,
@@ -296,6 +311,8 @@ export default function App() {
   const isResetBusy = resetStatus === "loading"
   const isBusy = isJoinBusy || isSubmitBusy || isSubmitReadingBusy || isResetBusy
   const isInProgress = phaseTag === "InProgress"
+  const isFinished = phaseTag === "Finished"
+  const showSetupSummary = !isInProgress && !isFinished
   const isReadingControlBusy = isSubmitReadingBusy || isResetBusy
   const shouldCleanJoinRegion =
     (playerSlot === "A" && phaseTag !== null && phaseTag !== "StandBy") ||
@@ -315,6 +332,18 @@ export default function App() {
         ? players[opponentSlot].nickname
         : "Opponent"
       : "Opponent"
+  const resultOpponentName =
+    opponentSlot && players[opponentSlot]?.nickname
+      ? players[opponentSlot].nickname.length <= 30
+        ? players[opponentSlot].nickname
+        : "Your opponent"
+      : "Your opponent"
+  const resultMessage =
+    isFinished && winnerSlot
+      ? winnerSlot === playerSlot
+        ? "You Won!"
+        : `${resultOpponentName} Won!`
+      : null
   const markerCell =
     isInProgress && playerSlot && positions?.[playerSlot]
       ? cellFromPosition(positions[playerSlot])
@@ -356,22 +385,22 @@ export default function App() {
           )}
         </div>
 
-        <div className="copy">
-          {!isInProgress ? (
-          <p className="description">
-              Click any square to rotate its arrow through the four compass directions.
-	      You may modify up to {MAX_MODIFIED_ARROWS} directions.  When you are done,
-	      submit your grid.
-          </p>
-	  ) : null}
-          {!isInProgress ? (
+        <div className="setup-summary">
+          {showSetupSummary ? (
+            <p className="description">
+              Click any square to rotate its arrow through the four compass
+              directions. You may modify up to {MAX_MODIFIED_ARROWS} directions.
+              When you are done, submit your grid.
+            </p>
+          ) : null}
+          {showSetupSummary ? (
             <p className="counter" aria-live="polite">
               Modified arrows: <span>{modifiedCount}</span>
             </p>
           ) : null}
         </div>
 
-        {isInProgress ? (
+        {isInProgress || isFinished ? (
           <div className="charges-display">
             <p className="charges-title">CHARGES</p>
             <div className="charges-row">
@@ -394,6 +423,12 @@ export default function App() {
                 </span>
               </div>
             </div>
+          </div>
+        ) : null}
+
+        {resultMessage ? (
+          <div className="result-banner" role="status" aria-live="polite">
+            {resultMessage}
           </div>
         ) : null}
 

@@ -60,7 +60,7 @@ input {
   backdrop-filter: blur(8px);
 }
 
-.copy {
+.setup-summary {
   max-width: 680px;
   text-align: center;
 }
@@ -192,6 +192,18 @@ h1 {
   font-weight: 700;
   line-height: 1;
   text-shadow: 0 0 10px rgba(86, 215, 255, 0.28);
+}
+
+.result-banner {
+  width: min(100%, 760px);
+  text-align: center;
+  font-size: clamp(1.8rem, 4.2vw, 2.9rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #b24a16;
+  text-shadow:
+    0 1px 0 rgba(255, 248, 234, 0.9),
+    0 6px 18px rgba(178, 74, 22, 0.18);
 }
 
 .button {
