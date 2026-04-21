@@ -3,6 +3,7 @@ import { CompassCanvas } from "./components/CompassCanvas"
 import { CompassReadingControl } from "./components/CompassReadingControl"
 import {
   cellFromPosition,
+  CHARGE_SQUARE_SIZE,
   countModifiedArrows,
   createInitialDirections,
   cycleDirectionAt,
@@ -31,9 +32,21 @@ type GameStateResponse = {
   phase: {
     tag: string
   }
+  players: {
+    A?: {
+      nickname: string
+    }
+    B?: {
+      nickname: string
+    }
+  }
   positions?: {
     A: Position
     B: Position
+  }
+  charges?: {
+    A: number
+    B: number
   }
 }
 
@@ -50,7 +63,12 @@ export default function App() {
     return storedSlot === "A" || storedSlot === "B" ? storedSlot : null
   })
   const [phaseTag, setPhaseTag] = useState<string | null>(null)
+  const [players, setPlayers] = useState<GameStateResponse["players"]>({
+    A: undefined,
+    B: undefined,
+  })
   const [positions, setPositions] = useState<GameStateResponse["positions"]>()
+  const [charges, setCharges] = useState<GameStateResponse["charges"]>()
   const [joinStatus, setJoinStatus] = useState<RequestStatus>("idle")
   const [submitGridStatus, setSubmitGridStatus] = useState<RequestStatus>("idle")
   const [submitReadingStatus, setSubmitReadingStatus] =
@@ -71,7 +89,9 @@ export default function App() {
 
       const payload = (await response.json()) as GameStateResponse
       setPhaseTag(payload.phase.tag)
+      setPlayers(payload.players)
       setPositions(payload.positions)
+      setCharges(payload.charges)
     } catch {
       // Keep the current UI state if polling fails temporarily.
     }
@@ -93,7 +113,9 @@ export default function App() {
         const payload = (await response.json()) as GameStateResponse
         if (isActive) {
           setPhaseTag(payload.phase.tag)
+          setPlayers(payload.players)
           setPositions(payload.positions)
+          setCharges(payload.charges)
         }
       } catch {
         // Keep the current UI state if polling fails temporarily.
@@ -246,7 +268,12 @@ export default function App() {
       setChosenNickname("")
       setPlayerSlot(null)
       setPhaseTag("StandBy")
+      setPlayers({
+        A: undefined,
+        B: undefined,
+      })
       setPositions(undefined)
+      setCharges(undefined)
       window.sessionStorage.removeItem("player-slot")
       window.sessionStorage.removeItem("player-nickname")
       setMessage("Game reset successfully.")
@@ -277,6 +304,17 @@ export default function App() {
       phaseTag !== "StandBy" &&
       phaseTag !== "WaitingForSecondPlayer")
   const displayedNickname = chosenNickname || nickname
+  const opponentSlot =
+    playerSlot === "A" ? "B" : playerSlot === "B" ? "A" : null
+  const myCharge = playerSlot ? charges?.[playerSlot] ?? 0 : 0
+  const opponentCharge =
+    opponentSlot ? charges?.[opponentSlot] ?? 0 : 0
+  const opponentNickname =
+    opponentSlot && players[opponentSlot]?.nickname
+      ? players[opponentSlot].nickname.length <= 30
+        ? players[opponentSlot].nickname
+        : "Opponent"
+      : "Opponent"
   const markerCell =
     isInProgress && playerSlot && positions?.[playerSlot]
       ? cellFromPosition(positions[playerSlot])
@@ -332,6 +370,32 @@ export default function App() {
             </p>
           ) : null}
         </div>
+
+        {isInProgress ? (
+          <div className="charges-display">
+            <p className="charges-title">CHARGES</p>
+            <div className="charges-row">
+              <div className="charge-entry">
+                <span className="charge-label">Me:</span>
+                <span
+                  className="charge-square"
+                  style={{ width: CHARGE_SQUARE_SIZE, height: CHARGE_SQUARE_SIZE }}
+                >
+                  {myCharge}
+                </span>
+              </div>
+              <div className="charge-entry">
+                <span className="charge-label">{opponentNickname}:</span>
+                <span
+                  className="charge-square"
+                  style={{ width: CHARGE_SQUARE_SIZE, height: CHARGE_SQUARE_SIZE }}
+                >
+                  {opponentCharge}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         <div className={`play-surface${isInProgress ? " in-progress" : ""}`}>
           <CompassCanvas
