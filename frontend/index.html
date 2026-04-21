@@ -1,33 +1,15 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Compass Grid</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <title>Counterfeit Compass</title>
   </head>
   <body>
-    <main class="page">
-      <section class="card">
-        <div class="copy">
-          <p class="eyebrow">Wolfram Recreation</p>
-          <h1>Compass Grid</h1>
-          <p class="description">
-            Click any square to rotate its arrow through the four compass
-            directions.
-          </p>
-          <p class="counter" aria-live="polite">
-            Modified arrows: <span id="modified-count">0</span>
-          </p>
-        </div>
-        <canvas
-          id="compass-canvas"
-          width="500"
-          height="500"
-          aria-label="Grid of squares with directional arrows"
-        ></canvas>
-      </section>
-    </main>
-    <script src="./src/script.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

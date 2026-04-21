@@ -4,6 +4,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon --watch src --exec ts-node src/server.ts",
+    "build:frontend": "npm --prefix ../frontend run build",
+    "dev:frontend": "npm --prefix ../frontend run build:watch",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/**/*.ts"
   },
