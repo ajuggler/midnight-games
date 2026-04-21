@@ -42,6 +42,9 @@ export default function App() {
     createInitialDirections()
   )
   const [nickname, setNickname] = useState("")
+  const [chosenNickname, setChosenNickname] = useState(
+    () => window.sessionStorage.getItem("player-nickname") ?? ""
+  )
   const [playerSlot, setPlayerSlot] = useState<PlayerSlot | null>(() => {
     const storedSlot = window.sessionStorage.getItem("player-slot")
     return storedSlot === "A" || storedSlot === "B" ? storedSlot : null
@@ -134,7 +137,9 @@ export default function App() {
       const payload = (await response.json()) as JoinResponse
       setJoinStatus("success")
       setPlayerSlot(payload.slot)
+      setChosenNickname(nickname)
       window.sessionStorage.setItem("player-slot", payload.slot)
+      window.sessionStorage.setItem("player-nickname", nickname)
       setPhaseTag(payload.phase.tag)
       setMessage(`Joined as player ${payload.slot} (${payload.phase.tag}).`)
     } catch (error) {
@@ -238,10 +243,12 @@ export default function App() {
       }
 
       setResetStatus("success")
+      setChosenNickname("")
       setPlayerSlot(null)
       setPhaseTag("StandBy")
       setPositions(undefined)
       window.sessionStorage.removeItem("player-slot")
+      window.sessionStorage.removeItem("player-nickname")
       setMessage("Game reset successfully.")
     } catch (error) {
       setResetStatus("error")
@@ -263,6 +270,13 @@ export default function App() {
   const isBusy = isJoinBusy || isSubmitBusy || isSubmitReadingBusy || isResetBusy
   const isInProgress = phaseTag === "InProgress"
   const isReadingControlBusy = isSubmitReadingBusy || isResetBusy
+  const shouldCleanJoinRegion =
+    (playerSlot === "A" && phaseTag !== null && phaseTag !== "StandBy") ||
+    (playerSlot === "B" &&
+      phaseTag !== null &&
+      phaseTag !== "StandBy" &&
+      phaseTag !== "WaitingForSecondPlayer")
+  const displayedNickname = chosenNickname || nickname
   const markerCell =
     isInProgress && playerSlot && positions?.[playerSlot]
       ? cellFromPosition(positions[playerSlot])
@@ -271,45 +285,52 @@ export default function App() {
   return (
     <main className="page">
       <section className="card">
+      <h1>Counterfeit Compass</h1>
+        <div className="join-panel">
+          {shouldCleanJoinRegion ? (
+            <p className="chosen-nickname">
+              <span className="field-label">Nickname:</span>{" "}
+              <span>{displayedNickname}</span>
+            </p>
+          ) : (
+            <>
+              <label className="field" htmlFor="nickname">
+                <span className="field-label">Nickname</span>
+                <input
+                  id="nickname"
+                  name="nickname"
+                  type="text"
+                  value={nickname}
+                  onChange={(event) => setNickname(event.target.value)}
+                  placeholder="Enter your nickname"
+                  autoComplete="nickname"
+                />
+              </label>
+              <button
+                type="button"
+                className="button primary"
+                onClick={handleJoin}
+                disabled={isBusy}
+              >
+                {isJoinBusy ? "Joining..." : "Join game"}
+              </button>
+            </>
+          )}
+        </div>
+
         <div className="copy">
-          <h1>Counterfeit Compass</h1>
+          {!isInProgress ? (
           <p className="description">
-            Click any square to rotate its arrow through the four compass
-            directions, then join the game from the same page.
+              Click any square to rotate its arrow through the four compass directions.
+	      You may modify up to {MAX_MODIFIED_ARROWS} directions.  When you are done,
+	      submit your grid.
           </p>
+	  ) : null}
           {!isInProgress ? (
             <p className="counter" aria-live="polite">
               Modified arrows: <span>{modifiedCount}</span>
             </p>
           ) : null}
-          {!isInProgress ? (
-            <p className="legend">
-              you may now modify up to {MAX_MODIFIED_ARROWS} directions
-            </p>
-          ) : null}
-        </div>
-
-        <div className="join-panel">
-          <label className="field" htmlFor="nickname">
-            <span className="field-label">Nickname</span>
-            <input
-              id="nickname"
-              name="nickname"
-              type="text"
-              value={nickname}
-              onChange={(event) => setNickname(event.target.value)}
-              placeholder="Enter your nickname"
-              autoComplete="nickname"
-            />
-          </label>
-          <button
-            type="button"
-            className="button primary"
-            onClick={handleJoin}
-            disabled={isBusy}
-          >
-            {isJoinBusy ? "Joining..." : "Join game"}
-          </button>
         </div>
 
         <div className={`play-surface${isInProgress ? " in-progress" : ""}`}>
