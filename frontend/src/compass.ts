@@ -2,19 +2,25 @@ export const GRID_SIZE = 5
 export const CANVAS_SIZE = 500
 export const CELL_SIZE = CANVAS_SIZE / GRID_SIZE
 export const MAX_MODIFIED_ARROWS = 9
+export const READING_SQUARE_SCALE = 1.236
+export const READING_SQUARE_SIZE = CELL_SIZE * READING_SQUARE_SCALE
 const SQUARE_SCALE = CELL_SIZE / Math.sqrt(2)
 const ARROW_SCALE = CELL_SIZE * 0.35
 const MARKER_COLOR = "rgb(16, 128, 128)"
+const READING_ARROW_SCALE = READING_SQUARE_SIZE * 0.35
+const READING_HEAD_LENGTH = READING_SQUARE_SIZE * 0.14
+const READING_LINE_WIDTH = 3 * READING_SQUARE_SCALE
 
 export type Direction = 0 | 1 | 2 | 3
 export type DirectionsState = Direction[]
 export type DirectionsGrid = Direction[][]
+export type Position = [number, number]
 export type Point = {
   x: number
   y: number
 }
 
-type Cell = {
+export type Cell = {
   i: number
   j: number
 }
@@ -39,6 +45,13 @@ const directions: Record<Direction, Point> = {
 const arrowColors = {
   0: "#d21818",
   1: "#1357d8",
+}
+
+type ArrowOptions = {
+  color?: string
+  arrowScale?: number
+  headLength?: number
+  lineWidth?: number
 }
 
 export function createInitialDirections(): DirectionsState {
@@ -110,10 +123,18 @@ export function findCellIndex(point: Point): number {
   return column * GRID_SIZE + row
 }
 
+export function cellFromPosition(position: Position): Cell {
+  return {
+    i: position[0],
+    j: position[1],
+  }
+}
+
 export function renderGrid(
   ctx: CanvasRenderingContext2D,
   directionsState: DirectionsState,
-  highlightModifiedArrows = true
+  highlightModifiedArrows = true,
+  markerCell: Cell = DEFAULT_MARKER
 ): void {
   const gridCenters = centers()
 
@@ -137,7 +158,50 @@ export function renderGrid(
     drawArrow(ctx, point, directionsState[index], paletteIndex)
   })
 
-  drawMarker(ctx, DEFAULT_MARKER)
+  drawMarker(ctx, markerCell)
+}
+
+export function renderCompassReadingSquare(
+  ctx: CanvasRenderingContext2D,
+  direction: Direction
+): void {
+  const canvasWidth = ctx.canvas.width
+  const canvasHeight = ctx.canvas.height
+  const squareX = (canvasWidth - READING_SQUARE_SIZE) / 2
+  const squareY = (canvasHeight - READING_SQUARE_SIZE) / 2
+
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+  ctx.fillStyle = "#000000"
+  ctx.fillRect(squareX, squareY, READING_SQUARE_SIZE, READING_SQUARE_SIZE)
+
+  drawArrow(
+    ctx,
+    { x: canvasWidth / 2, y: canvasHeight / 2 },
+    direction,
+    0,
+    {
+      color: "#ffffff",
+      arrowScale: READING_ARROW_SCALE,
+      headLength: READING_HEAD_LENGTH,
+      lineWidth: READING_LINE_WIDTH,
+    }
+  )
+}
+
+export function isPointInCompassReadingSquare(
+  point: Point,
+  canvasWidth: number,
+  canvasHeight: number
+): boolean {
+  const squareX = (canvasWidth - READING_SQUARE_SIZE) / 2
+  const squareY = (canvasHeight - READING_SQUARE_SIZE) / 2
+
+  return (
+    point.x >= squareX &&
+    point.x <= squareX + READING_SQUARE_SIZE &&
+    point.y >= squareY &&
+    point.y <= squareY + READING_SQUARE_SIZE
+  )
 }
 
 function centers(): Point[] {
@@ -183,21 +247,25 @@ function drawArrow(
   ctx: CanvasRenderingContext2D,
   center: Point,
   directionIndex: Direction,
-  paletteIndex = 0
+  paletteIndex = 0,
+  options: ArrowOptions = {}
 ): void {
   const dir = directions[directionIndex]
-  const dx = dir.x * ARROW_SCALE
-  const dy = dir.y * ARROW_SCALE
+  const arrowScale = options.arrowScale ?? ARROW_SCALE
+  const headLength = options.headLength ?? CELL_SIZE * 0.14
+  const lineWidth = options.lineWidth ?? 3
+  const strokeColor = options.color ?? arrowColors[paletteIndex as 0 | 1]
+  const dx = dir.x * arrowScale
+  const dy = dir.y * arrowScale
   const from = { x: center.x - dx, y: center.y - dy }
   const to = { x: center.x + dx, y: center.y + dy }
-  const headLength = CELL_SIZE * 0.14
   const angle = Math.atan2(to.y - from.y, to.x - from.x)
 
   ctx.beginPath()
   ctx.moveTo(from.x, from.y)
   ctx.lineTo(to.x, to.y)
-  ctx.strokeStyle = arrowColors[paletteIndex as 0 | 1]
-  ctx.lineWidth = 3
+  ctx.strokeStyle = strokeColor
+  ctx.lineWidth = lineWidth
   ctx.lineCap = "round"
   ctx.stroke()
 
@@ -212,7 +280,7 @@ function drawArrow(
     to.y - headLength * Math.sin(angle + Math.PI / 6)
   )
   ctx.closePath()
-  ctx.fillStyle = arrowColors[paletteIndex as 0 | 1]
+  ctx.fillStyle = strokeColor
   ctx.fill()
 }
 

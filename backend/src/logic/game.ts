@@ -32,7 +32,7 @@ function mod(n: number, m: number): number {
 }
 
 function addVector(a: Position, b: Vector): Position {
-  return [mod(a[0] + b[0], 4), mod(a[1] + b[1], 4)]
+  return [mod(a[0] + b[0], 5), mod(a[1] + b[1], 5)]
 }
 
 function otherPlayer(player: Player): Player {

@@ -1,18 +1,23 @@
 import { useEffect, useState } from "react"
 import { CompassCanvas } from "./components/CompassCanvas"
+import { CompassReadingControl } from "./components/CompassReadingControl"
 import {
+  cellFromPosition,
   countModifiedArrows,
   createInitialDirections,
   cycleDirectionAt,
   gridFromDirections,
   MAX_MODIFIED_ARROWS,
+  type Direction,
   type DirectionsState,
+  type Position,
 } from "./compass"
 
 type RequestStatus = "idle" | "loading" | "success" | "error"
+type PlayerSlot = "A" | "B"
 
 type JoinResponse = {
-  slot: "A" | "B"
+  slot: PlayerSlot
   phase: {
     tag: string
   }
@@ -26,6 +31,10 @@ type GameStateResponse = {
   phase: {
     tag: string
   }
+  positions?: {
+    A: Position
+    B: Position
+  }
 }
 
 export default function App() {
@@ -33,9 +42,16 @@ export default function App() {
     createInitialDirections()
   )
   const [nickname, setNickname] = useState("")
+  const [playerSlot, setPlayerSlot] = useState<PlayerSlot | null>(() => {
+    const storedSlot = window.sessionStorage.getItem("player-slot")
+    return storedSlot === "A" || storedSlot === "B" ? storedSlot : null
+  })
   const [phaseTag, setPhaseTag] = useState<string | null>(null)
+  const [positions, setPositions] = useState<GameStateResponse["positions"]>()
   const [joinStatus, setJoinStatus] = useState<RequestStatus>("idle")
   const [submitGridStatus, setSubmitGridStatus] = useState<RequestStatus>("idle")
+  const [submitReadingStatus, setSubmitReadingStatus] =
+    useState<RequestStatus>("idle")
   const [resetStatus, setResetStatus] = useState<RequestStatus>("idle")
   const [message, setMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
@@ -52,6 +68,7 @@ export default function App() {
 
       const payload = (await response.json()) as GameStateResponse
       setPhaseTag(payload.phase.tag)
+      setPositions(payload.positions)
     } catch {
       // Keep the current UI state if polling fails temporarily.
     }
@@ -73,6 +90,7 @@ export default function App() {
         const payload = (await response.json()) as GameStateResponse
         if (isActive) {
           setPhaseTag(payload.phase.tag)
+          setPositions(payload.positions)
         }
       } catch {
         // Keep the current UI state if polling fails temporarily.
@@ -93,6 +111,7 @@ export default function App() {
   async function handleJoin() {
     setJoinStatus("loading")
     setSubmitGridStatus("idle")
+    setSubmitReadingStatus("idle")
     setResetStatus("idle")
     setMessage("")
     setErrorMessage("")
@@ -114,6 +133,8 @@ export default function App() {
 
       const payload = (await response.json()) as JoinResponse
       setJoinStatus("success")
+      setPlayerSlot(payload.slot)
+      window.sessionStorage.setItem("player-slot", payload.slot)
       setPhaseTag(payload.phase.tag)
       setMessage(`Joined as player ${payload.slot} (${payload.phase.tag}).`)
     } catch (error) {
@@ -127,6 +148,7 @@ export default function App() {
   async function handleSubmitGrid() {
     setSubmitGridStatus("loading")
     setJoinStatus("idle")
+    setSubmitReadingStatus("idle")
     setResetStatus("idle")
     setMessage("")
     setErrorMessage("")
@@ -159,10 +181,48 @@ export default function App() {
     }
   }
 
+  async function handleSubmitReading(direction: Direction) {
+    setSubmitReadingStatus("loading")
+    setJoinStatus("idle")
+    setSubmitGridStatus("idle")
+    setResetStatus("idle")
+    setMessage("")
+    setErrorMessage("")
+
+    try {
+      const response = await fetch("/reading", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "compass_reading",
+          direction,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => ({}))) as ApiError
+        throw new Error(errorPayload.error ?? "Unable to submit the reading")
+      }
+
+      setSubmitReadingStatus("success")
+      setMessage("Compass reading submitted successfully.")
+      void refreshPhaseTag()
+    } catch (error) {
+      setSubmitReadingStatus("error")
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to submit the reading"
+      )
+    }
+  }
+
   async function handleForceReset() {
     setResetStatus("loading")
     setJoinStatus("idle")
     setSubmitGridStatus("idle")
+    setSubmitReadingStatus("idle")
     setMessage("")
     setErrorMessage("")
 
@@ -178,7 +238,10 @@ export default function App() {
       }
 
       setResetStatus("success")
+      setPlayerSlot(null)
       setPhaseTag("StandBy")
+      setPositions(undefined)
+      window.sessionStorage.removeItem("player-slot")
       setMessage("Game reset successfully.")
     } catch (error) {
       setResetStatus("error")
@@ -195,9 +258,15 @@ export default function App() {
   const modifiedCount = countModifiedArrows(directions)
   const isJoinBusy = joinStatus === "loading"
   const isSubmitBusy = submitGridStatus === "loading"
+  const isSubmitReadingBusy = submitReadingStatus === "loading"
   const isResetBusy = resetStatus === "loading"
-  const isBusy = isJoinBusy || isSubmitBusy || isResetBusy
+  const isBusy = isJoinBusy || isSubmitBusy || isSubmitReadingBusy || isResetBusy
   const isInProgress = phaseTag === "InProgress"
+  const isReadingControlBusy = isSubmitReadingBusy || isResetBusy
+  const markerCell =
+    isInProgress && playerSlot && positions?.[playerSlot]
+      ? cellFromPosition(positions[playerSlot])
+      : undefined
 
   return (
     <main className="page">
@@ -243,11 +312,20 @@ export default function App() {
           </button>
         </div>
 
-        <CompassCanvas
-          directions={directions}
-          onCellClick={handleCellClick}
-          highlightModifiedArrows={!isInProgress}
-        />
+        <div className={`play-surface${isInProgress ? " in-progress" : ""}`}>
+          <CompassCanvas
+            directions={directions}
+            onCellClick={handleCellClick}
+            highlightModifiedArrows={!isInProgress}
+            markerCell={markerCell}
+          />
+          {isInProgress ? (
+            <CompassReadingControl
+              isSubmitting={isReadingControlBusy}
+              onSubmit={handleSubmitReading}
+            />
+          ) : null}
+        </div>
 
         {!isInProgress ? (
           <div className="board-actions">
