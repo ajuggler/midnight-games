@@ -118,6 +118,47 @@ function applyCompassReading(
   }
 }
 
+function verifyCompassReading(
+  positions: { A: Position; B: Position },
+  grids: ReadyGrids,
+  reader: Player,
+  movement: Direction
+): boolean {
+  const grid = grids[reader];
+  const [i, j] = positions[reader];
+
+  const a = grid[i][mod(j + 1, 5)];
+  const b = grid[mod(i + 1, 5)][j];
+  const c = grid[i][mod(j - 1, 5)];
+  const d = grid[mod(i - 1, 5)][j];
+  const e = grid[i][j];
+
+  const counts = [0, 0, 0, 0];
+
+  for (const x of [a, b, c, d]) {
+    counts[x]++;
+  }
+
+  let max1 = -1;
+  let max2 = -1;
+  let argmax: Direction = 0;
+
+  for (let i = 0; i < 4; i++) {
+    const count = counts[i];
+
+    if (count > max1) {
+      max2 = max1;
+      max1 = count;
+      argmax = i as Direction;
+    } else if (count > max2) {
+      max2 = count;
+    }
+  }
+
+  const maxMov = max1 === max2 ? e : argmax;
+  return (movement === maxMov)
+}
+
 export function joinGame(state: ServerState, request: JoinRequest): JoinResult {
   const { game, grids } = state
 
@@ -277,6 +318,11 @@ export function submitReading(
     payload.direction
   )
 
+  const updatedReadings = {
+    ...game.lastReadings,
+    [player]: payload.direction
+  };
+
   const winner = updated.charges[opponent] >= 7 ? opponent : undefined
 
   const nextGame: GameState =
@@ -289,6 +335,7 @@ export function submitReading(
         }
       : {
           ...game,
+          lastReadings: updatedReadings,
           positions: updated.positions,
           charges: updated.charges,
           turn: {
@@ -305,8 +352,7 @@ export function submitReading(
 
 export function submitProof(
   state: ServerState,
-  player: Player,
-  zkProof: string
+  player: Player
 ): ProofResult {
   const { game, grids } = state
 
@@ -322,9 +368,28 @@ export function submitProof(
     return { ok: false, status: 500, error: "Corrupt game state" }
   }
 
+  if (!game.positions) {
+    return { ok: false, status: 500, error: "Corrupt game state" }
+  }
+
+  const challengedReading = game.lastReadings?.[player]
+  if (challengedReading === undefined) {
+    return { ok: false, status: 400, error: "No reading to prove" }
+  }
+
+  const readyGrids = getReadyGrids(grids)
+  if (!readyGrids) {
+    return { ok: false, status: 500, error: "Corrupt grid state" }
+  }
+
   const opponent = otherPlayer(player)
 
-  if (zkProof === "valid proof") {
+  if (verifyCompassReading(
+    game.positions,
+    readyGrids,
+    player,
+    challengedReading
+  )) {
     const nextGame: GameState = {
       ...game,
       charges: {

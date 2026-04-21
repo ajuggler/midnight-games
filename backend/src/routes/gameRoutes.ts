@@ -126,13 +126,7 @@ export function createGameRouter(): Router {
       return res.status(401).json({ error: "Invalid session" })
     }
 
-    const { zk_proof } = req.body as { zk_proof?: unknown }
-
-    if (typeof zk_proof !== "string") {
-      return res.status(400).json({ error: "zk_proof must be a string" })
-    }
-
-    const result = submitProof(getServerState(), playerSession.slot, zk_proof)
+    const result = submitProof(getServerState(), playerSession.slot)
 
     if (!result.ok) {
       return res.status(result.status).json({ error: result.error })

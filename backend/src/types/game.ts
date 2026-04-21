@@ -41,6 +41,10 @@ export type GameState = {
     A: number
     B: number
   }
+  lastReadings?: {
+    A?: Direction
+    B?: Direction
+  }
   turn?: { player: Player; challenged: boolean }
 }
 
