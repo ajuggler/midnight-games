@@ -112,7 +112,8 @@ export function findCellIndex(point: Point): number {
 
 export function renderGrid(
   ctx: CanvasRenderingContext2D,
-  directionsState: DirectionsState
+  directionsState: DirectionsState,
+  highlightModifiedArrows = true
 ): void {
   const gridCenters = centers()
 
@@ -130,7 +131,9 @@ export function renderGrid(
   })
 
   gridCenters.forEach((point, index) => {
-    const paletteIndex = Number(directionsState[index] !== defaultDirections[index])
+    const paletteIndex = highlightModifiedArrows
+      ? Number(directionsState[index] !== defaultDirections[index])
+      : 0
     drawArrow(ctx, point, directionsState[index], paletteIndex)
   })
 

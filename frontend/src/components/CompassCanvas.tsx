@@ -9,11 +9,13 @@ import {
 type CompassCanvasProps = {
   directions: DirectionsState
   onCellClick: (index: number) => void
+  highlightModifiedArrows?: boolean
 }
 
 export function CompassCanvas({
   directions,
   onCellClick,
+  highlightModifiedArrows = true,
 }: CompassCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
@@ -25,8 +27,8 @@ export function CompassCanvas({
       return
     }
 
-    renderGrid(ctx, directions)
-  }, [directions])
+    renderGrid(ctx, directions, highlightModifiedArrows)
+  }, [directions, highlightModifiedArrows])
 
   function handleCanvasClick(event: React.MouseEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current

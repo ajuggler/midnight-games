@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { CompassCanvas } from "./components/CompassCanvas"
 import {
   countModifiedArrows,
@@ -22,16 +22,73 @@ type ApiError = {
   error?: string
 }
 
+type GameStateResponse = {
+  phase: {
+    tag: string
+  }
+}
+
 export default function App() {
   const [directions, setDirections] = useState<DirectionsState>(() =>
     createInitialDirections()
   )
   const [nickname, setNickname] = useState("")
+  const [phaseTag, setPhaseTag] = useState<string | null>(null)
   const [joinStatus, setJoinStatus] = useState<RequestStatus>("idle")
   const [submitGridStatus, setSubmitGridStatus] = useState<RequestStatus>("idle")
   const [resetStatus, setResetStatus] = useState<RequestStatus>("idle")
   const [message, setMessage] = useState("")
   const [errorMessage, setErrorMessage] = useState("")
+
+  async function refreshPhaseTag() {
+    try {
+      const response = await fetch("/state", {
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        return
+      }
+
+      const payload = (await response.json()) as GameStateResponse
+      setPhaseTag(payload.phase.tag)
+    } catch {
+      // Keep the current UI state if polling fails temporarily.
+    }
+  }
+
+  useEffect(() => {
+    let isActive = true
+
+    async function syncGameState() {
+      try {
+        const response = await fetch("/state", {
+          credentials: "include",
+        })
+
+        if (!response.ok) {
+          return
+        }
+
+        const payload = (await response.json()) as GameStateResponse
+        if (isActive) {
+          setPhaseTag(payload.phase.tag)
+        }
+      } catch {
+        // Keep the current UI state if polling fails temporarily.
+      }
+    }
+
+    void syncGameState()
+    const intervalId = window.setInterval(() => {
+      void syncGameState()
+    }, 3000)
+
+    return () => {
+      isActive = false
+      window.clearInterval(intervalId)
+    }
+  }, [])
 
   async function handleJoin() {
     setJoinStatus("loading")
@@ -57,6 +114,7 @@ export default function App() {
 
       const payload = (await response.json()) as JoinResponse
       setJoinStatus("success")
+      setPhaseTag(payload.phase.tag)
       setMessage(`Joined as player ${payload.slot} (${payload.phase.tag}).`)
     } catch (error) {
       setJoinStatus("error")
@@ -92,6 +150,7 @@ export default function App() {
 
       setSubmitGridStatus("success")
       setMessage("Grid submitted successfully.")
+      void refreshPhaseTag()
     } catch (error) {
       setSubmitGridStatus("error")
       setErrorMessage(
@@ -119,6 +178,7 @@ export default function App() {
       }
 
       setResetStatus("success")
+      setPhaseTag("StandBy")
       setMessage("Game reset successfully.")
     } catch (error) {
       setResetStatus("error")
@@ -137,6 +197,7 @@ export default function App() {
   const isSubmitBusy = submitGridStatus === "loading"
   const isResetBusy = resetStatus === "loading"
   const isBusy = isJoinBusy || isSubmitBusy || isResetBusy
+  const isInProgress = phaseTag === "InProgress"
 
   return (
     <main className="page">
@@ -147,12 +208,16 @@ export default function App() {
             Click any square to rotate its arrow through the four compass
             directions, then join the game from the same page.
           </p>
-          <p className="counter" aria-live="polite">
-            Modified arrows: <span>{modifiedCount}</span>
-          </p>
-          <p className="legend">
-            you may now modify up to {MAX_MODIFIED_ARROWS} directions
-          </p>
+          {!isInProgress ? (
+            <p className="counter" aria-live="polite">
+              Modified arrows: <span>{modifiedCount}</span>
+            </p>
+          ) : null}
+          {!isInProgress ? (
+            <p className="legend">
+              you may now modify up to {MAX_MODIFIED_ARROWS} directions
+            </p>
+          ) : null}
         </div>
 
         <div className="join-panel">
@@ -178,7 +243,11 @@ export default function App() {
           </button>
         </div>
 
-        <CompassCanvas directions={directions} onCellClick={handleCellClick} />
+        <CompassCanvas
+          directions={directions}
+          onCellClick={handleCellClick}
+          highlightModifiedArrows={!isInProgress}
+        />
 
         <div className="board-actions">
           <button
