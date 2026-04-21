@@ -249,16 +249,18 @@ export default function App() {
           highlightModifiedArrows={!isInProgress}
         />
 
-        <div className="board-actions">
-          <button
-            type="button"
-            className="button primary"
-            onClick={handleSubmitGrid}
-            disabled={isBusy}
-          >
-            {isSubmitBusy ? "Submitting grid..." : "Submit grid"}
-          </button>
-        </div>
+        {!isInProgress ? (
+          <div className="board-actions">
+            <button
+              type="button"
+              className="button primary"
+              onClick={handleSubmitGrid}
+              disabled={isBusy}
+            >
+              {isSubmitBusy ? "Submitting grid..." : "Submit grid"}
+            </button>
+          </div>
+        ) : null}
 
         <div className="status-panel" aria-live="polite">
           {message ? <p className="status-message success">{message}</p> : null}
