@@ -22,6 +22,7 @@ export function initialServerState(): ServerState {
     game: {
       phase: { tag: "StandBy" },
       players: {},
+      lastReadings: {}
     },
     grids: {},
   }
@@ -89,32 +90,41 @@ function getReadyGrids(grids: Grids): ReadyGrids | null {
 }
 
 function applyCompassReading(
+  lastReadings: { A?: Direction, B?: Direction },
   positions: { A: Position; B: Position },
   charges: { A: number; B: number },
   grids: ReadyGrids,
-  reader: Player,
-  movement: Direction
+  reader: Player
 ): {
   positions: { A: Position; B: Position }
   charges: { A: number; B: number }
 } {
-  const target = otherPlayer(reader)
-  const currentPosition = positions[target]
-  const currentCharge = charges[target]
-  const newPosition = addVector(currentPosition, directionAsVector[movement])
-  const [i, j] = newPosition
-  const newDirection = grids[target][i][j]
-  const newCharge = modifyCharge(currentCharge, movement, newDirection)
+  const opponent = otherPlayer(reader)
+  const movement = lastReadings[opponent]
+
+  if (movement != null) {
+    const currentPosition = positions[reader]
+    const currentCharge = charges[reader]
+    const newPosition = addVector(currentPosition, directionAsVector[movement])
+    const [i, j] = newPosition
+    const newDirection = grids[reader][i][j]
+    const newCharge = modifyCharge(currentCharge, movement, newDirection)
+
+    return {
+      positions: {
+	...positions,
+	[reader]: newPosition,
+      },
+      charges: {
+	...charges,
+	[reader]: newCharge,
+      },
+    }
+  }
 
   return {
-    positions: {
-      ...positions,
-      [target]: newPosition,
-    },
-    charges: {
-      ...charges,
-      [target]: newCharge,
-    },
+    positions: positions,
+    charges: charges
   }
 }
 
@@ -311,24 +321,26 @@ export function submitReading(
   }
 
   const updated = applyCompassReading(
+    game.lastReadings,
     game.positions,
     game.charges,
     readyGrids,
-    player,
-    payload.direction
+    player
   )
 
   const updatedReadings = {
     ...game.lastReadings,
-    [player]: payload.direction
+    [player]: payload.direction,
+    [opponent]: undefined
   };
 
-  const winner = updated.charges[opponent] >= 7 ? opponent : undefined
+  const winner = updated.charges[player] >= 7 ? player : undefined
 
   const nextGame: GameState =
     winner !== undefined
       ? {
           ...game,
+          lastReadings: {},
           positions: updated.positions,
           charges: updated.charges,
           phase: { tag: "Finished", winner },
@@ -376,7 +388,7 @@ export function submitProof(
   if (challengedReading === undefined) {
     return { ok: false, status: 400, error: "No reading to prove" }
   }
-
+  
   const readyGrids = getReadyGrids(grids)
   if (!readyGrids) {
     return { ok: false, status: 500, error: "Corrupt grid state" }

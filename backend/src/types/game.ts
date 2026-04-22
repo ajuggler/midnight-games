@@ -33,6 +33,10 @@ export type GameState = {
     A?: PlayerSession
     B?: PlayerSession
   }
+  lastReadings: {
+    A?: Direction
+    B?: Direction
+  }
   positions?: {
     A: Position
     B: Position
@@ -40,10 +44,6 @@ export type GameState = {
   charges?: {
     A: number
     B: number
-  }
-  lastReadings?: {
-    A?: Direction
-    B?: Direction
   }
   turn?: { player: Player; challenged: boolean }
 }
