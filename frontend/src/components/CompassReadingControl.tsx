@@ -69,7 +69,7 @@ export function CompassReadingControl({
         disabled={isSubmitting}
         onClick={() => onSubmit(direction)}
       >
-        {isSubmitting ? "Submitting..." : "submit"}
+        {isSubmitting ? "Submitting..." : "accept & submit"}
       </button>
     </div>
   )

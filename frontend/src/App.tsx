@@ -7,6 +7,7 @@ import {
   countModifiedArrows,
   createInitialDirections,
   cycleDirectionAt,
+  futurePosition,
   gridFromDirections,
   MAX_MODIFIED_ARROWS,
   type Direction,
@@ -51,6 +52,10 @@ type GameStateResponse = {
       nickname: string
     }
   }
+  lastReadings: {
+    A?: Direction
+    B?: Direction
+  }
   positions?: {
     A: Position
     B: Position
@@ -59,6 +64,10 @@ type GameStateResponse = {
     A: number
     B: number
   }
+}
+
+function otherPlayer(player: PlayerSlot): PlayerSlot {
+  return player === "A" ? "B" : "A"
 }
 
 export default function App() {
@@ -78,6 +87,10 @@ export default function App() {
   const [players, setPlayers] = useState<GameStateResponse["players"]>({
     A: undefined,
     B: undefined,
+  })
+  const [lastReadings, setLastReadings] = useState<GameStateResponse["lastReadings"]>({
+    A: undefined,
+    B: undefined
   })
   const [positions, setPositions] = useState<GameStateResponse["positions"]>()
   const [charges, setCharges] = useState<GameStateResponse["charges"]>()
@@ -103,6 +116,7 @@ export default function App() {
       setPhaseTag(payload.phase.tag)
       setWinnerSlot(payload.phase.tag === "Finished" ? payload.phase.winner : null)
       setPlayers(payload.players)
+      setLastReadings(payload.lastReadings)
       setPositions(payload.positions)
       setCharges(payload.charges)
     } catch {
@@ -128,6 +142,7 @@ export default function App() {
           setPhaseTag(payload.phase.tag)
           setWinnerSlot(payload.phase.tag === "Finished" ? payload.phase.winner : null)
           setPlayers(payload.players)
+	  setLastReadings(payload.lastReadings)
           setPositions(payload.positions)
           setCharges(payload.charges)
         }
@@ -259,6 +274,7 @@ export default function App() {
     }
   }
 
+  // DEBUG
   async function handleForceReset() {
     setResetStatus("loading")
     setJoinStatus("idle")
@@ -344,10 +360,30 @@ export default function App() {
         ? "You Won!"
         : `${resultOpponentName} Won!`
       : null
-  const markerCell =
-    isInProgress && playerSlot && positions?.[playerSlot]
+  let markerCell: Cell | undefined;
+  if (
+    isInProgress &&
+    playerSlot != null &&
+    positions?.[playerSlot] != null
+  ) {
+    const currentPosition = positions[playerSlot];
+    const opponent = otherPlayer(playerSlot);
+    markerCell = (lastReadings?.[opponent] !== undefined)
+      ? cellFromPosition(
+	  futurePosition(currentPosition, lastReadings[opponent])
+        )
+      : cellFromPosition(currentPosition);
+  }
+  let phantomCell: Cell | undefined;
+  if (
+    isInProgress &&
+    playerSlot != null &&
+    positions?.[playerSlot] != null
+  ) {
+    phantomCell = (lastReadings?.[otherPlayer(playerSlot)] !== undefined)
       ? cellFromPosition(positions[playerSlot])
       : undefined
+  }
 
   return (
     <main className="page">
@@ -438,6 +474,8 @@ export default function App() {
             onCellClick={handleCellClick}
             highlightModifiedArrows={!isInProgress}
             markerCell={markerCell}
+            phantomCell={phantomCell}
+            drawPhantomMarker={lastReadings?.[otherPlayer(playerSlot)] !== undefined}
           />
           {isInProgress ? (
             <CompassReadingControl

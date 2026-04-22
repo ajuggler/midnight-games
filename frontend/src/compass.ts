@@ -16,6 +16,7 @@ export type Direction = 0 | 1 | 2 | 3
 export type DirectionsState = Direction[]
 export type DirectionsGrid = Direction[][]
 export type Position = [number, number]
+export type Vector = [number, number]
 export type Point = {
   x: number
   y: number
@@ -27,6 +28,7 @@ export type Cell = {
 }
 
 const DEFAULT_MARKER: Cell = { i: 2, j: 2 }
+const PHANTOM_MARKER: Cell = { i: 0, j: 0 }
 
 export const defaultDirections: DirectionsState = [
   3, 3, 0, 0, 0,
@@ -131,11 +133,32 @@ export function cellFromPosition(position: Position): Cell {
   }
 }
 
+function mod(n: number, m: number): number {
+  return ((n % m) + m) % m
+}
+
+function addVector(a: Position, b: Vector): Position {
+  return [mod(a[0] + b[0], 5), mod(a[1] + b[1], 5)]
+}
+
+const directionAsVector: Record<Direction, Vector> = {
+  0: [0, 1],
+  1: [1, 0],
+  2: [0, -1],
+  3: [-1, 0],
+}
+
+export function futurePosition(pos: Position, dir: Direction): Position {
+  return addVector(pos, directionAsVector[dir])
+}
+    
 export function renderGrid(
   ctx: CanvasRenderingContext2D,
   directionsState: DirectionsState,
   highlightModifiedArrows = true,
-  markerCell: Cell = DEFAULT_MARKER
+  markerCell: Cell = DEFAULT_MARKER,
+  phantomCell: Cell = PHANTOM_MARKER,
+  drawPhantomMarker = false
 ): void {
   const gridCenters = centers()
 
@@ -160,6 +183,10 @@ export function renderGrid(
   })
 
   drawMarker(ctx, markerCell)
+
+  if (drawPhantomMarker) {
+    drawMarkerUnfilled(ctx, phantomCell)
+  }
 }
 
 export function renderCompassReadingSquare(
@@ -311,4 +338,25 @@ function drawMarker(
   )
   ctx.fillStyle = MARKER_COLOR
   ctx.fill()
+}
+
+function drawMarkerUnfilled(
+  ctx: CanvasRenderingContext2D,
+  cell: Cell,
+  radius = 0.05,
+  offset = 0.618
+): void {
+  const markerGeometry = marker(cell, radius, offset)
+
+  ctx.beginPath()
+  ctx.arc(
+    markerGeometry.x,
+    markerGeometry.y,
+    markerGeometry.radius,
+    0,
+    Math.PI * 2
+  )
+  ctx.strokeStyle = MARKER_COLOR
+  ctx.lineWidth = 2
+  ctx.stroke()
 }
