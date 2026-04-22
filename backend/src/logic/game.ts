@@ -28,6 +28,10 @@ export function initialServerState(): ServerState {
   }
 }
 
+// --------------------
+// Pure helpers
+// --------------------
+
 function mod(n: number, m: number): number {
   return ((n % m) + m) % m
 }
@@ -168,6 +172,10 @@ function verifyCompassReading(
   const maxMov = max1 === max2 ? e : argmax;
   return (movement === maxMov)
 }
+
+// --------------------
+// Pure reducers
+// --------------------
 
 export function joinGame(state: ServerState, request: JoinRequest): JoinResult {
   const { game, grids } = state

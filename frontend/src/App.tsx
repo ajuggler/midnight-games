@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { CompassCanvas } from "./components/CompassCanvas"
 import { CompassReadingControl } from "./components/CompassReadingControl"
 import {
+  type Cell,
   cellFromPosition,
   CHARGE_SQUARE_SIZE,
   countModifiedArrows,
@@ -64,10 +65,6 @@ type GameStateResponse = {
     A: number
     B: number
   }
-}
-
-function otherPlayer(player: PlayerSlot): PlayerSlot {
-  return player === "A" ? "B" : "A"
 }
 
 export default function App() {
@@ -274,6 +271,42 @@ export default function App() {
     }
   }
 
+  async function handleSubmitChallenge() {
+    setSubmitReadingStatus("loading")
+    setJoinStatus("idle")
+    setSubmitGridStatus("idle")
+    setResetStatus("idle")
+    setMessage("")
+    setErrorMessage("")
+
+    try {
+      const response = await fetch("/reading", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: "challenge"
+        }),
+      })
+
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => ({}))) as ApiError
+        throw new Error(errorPayload.error ?? "Unable to submit challenge")
+      }
+
+      setSubmitReadingStatus("success")
+      setMessage("Challenge submitted successfully.")
+      void refreshPhaseTag()
+    } catch (error) {
+      setSubmitReadingStatus("error")
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to submit the challenge"
+      )
+    }
+  }
+
   // DEBUG
   async function handleForceReset() {
     setResetStatus("loading")
@@ -300,6 +333,10 @@ export default function App() {
       setPhaseTag("StandBy")
       setWinnerSlot(null)
       setPlayers({
+        A: undefined,
+        B: undefined,
+      })
+      setLastReadings({
         A: undefined,
         B: undefined,
       })
@@ -339,6 +376,12 @@ export default function App() {
   const displayedNickname = chosenNickname || nickname
   const opponentSlot =
     playerSlot === "A" ? "B" : playerSlot === "B" ? "A" : null
+  const opponentLastReading = opponentSlot
+    ? lastReadings?.[opponentSlot]
+    : undefined
+  const existsLastReading = opponentSlot
+    ? opponentLastReading !== undefined
+    : false
   const myCharge = playerSlot ? charges?.[playerSlot] ?? 0 : 0
   const opponentCharge =
     opponentSlot ? charges?.[opponentSlot] ?? 0 : 0
@@ -367,10 +410,9 @@ export default function App() {
     positions?.[playerSlot] != null
   ) {
     const currentPosition = positions[playerSlot];
-    const opponent = otherPlayer(playerSlot);
-    markerCell = (lastReadings?.[opponent] !== undefined)
+    markerCell = existsLastReading && opponentLastReading !== undefined
       ? cellFromPosition(
-	  futurePosition(currentPosition, lastReadings[opponent])
+          futurePosition(currentPosition, opponentLastReading)
         )
       : cellFromPosition(currentPosition);
   }
@@ -380,7 +422,7 @@ export default function App() {
     playerSlot != null &&
     positions?.[playerSlot] != null
   ) {
-    phantomCell = (lastReadings?.[otherPlayer(playerSlot)] !== undefined)
+    phantomCell = existsLastReading
       ? cellFromPosition(positions[playerSlot])
       : undefined
   }
@@ -475,12 +517,14 @@ export default function App() {
             highlightModifiedArrows={!isInProgress}
             markerCell={markerCell}
             phantomCell={phantomCell}
-            drawPhantomMarker={lastReadings?.[otherPlayer(playerSlot)] !== undefined}
+            drawPhantomMarker={existsLastReading}
           />
           {isInProgress ? (
             <CompassReadingControl
               isSubmitting={isReadingControlBusy}
-              onSubmit={handleSubmitReading}
+              onSubmitReading={handleSubmitReading}
+              onSubmitChallenge={handleSubmitChallenge}
+              showChallenge={existsLastReading}
             />
           ) : null}
         </div>

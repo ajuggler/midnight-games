@@ -10,12 +10,16 @@ const READING_CANVAS_SIZE = Math.ceil(READING_SQUARE_SIZE + 28)
 
 type CompassReadingControlProps = {
   isSubmitting: boolean
-  onSubmit: (direction: Direction) => void
+  onSubmitReading: (direction: Direction) => void
+  onSubmitChallenge: () => void
+  showChallenge: boolean
 }
 
 export function CompassReadingControl({
   isSubmitting,
-  onSubmit,
+  onSubmitReading,
+  onSubmitChallenge,
+  showChallenge,
 }: CompassReadingControlProps) {
   const [direction, setDirection] = useState<Direction>(0)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -67,10 +71,20 @@ export function CompassReadingControl({
         type="button"
         className="button primary"
         disabled={isSubmitting}
-        onClick={() => onSubmit(direction)}
+        onClick={() => onSubmitReading(direction)}
       >
         {isSubmitting ? "Submitting..." : "accept & submit"}
       </button>
+      {showChallenge ? (
+        <button
+          type="button"
+          className="button primary"
+          disabled={isSubmitting}
+          onClick={() => onSubmitChallenge()}
+        >
+          {isSubmitting ? "Submitting..." : "challenge"}
+        </button>
+      ) : null}
     </div>
   )
 }
