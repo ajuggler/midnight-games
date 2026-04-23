@@ -1,7 +1,7 @@
 export const GRID_SIZE = 5
 export const CANVAS_SIZE = 500
 export const CELL_SIZE = CANVAS_SIZE / GRID_SIZE
-export const MAX_MODIFIED_ARROWS = 9
+export const MAX_MODIFIED_ARROWS = 3
 export const READING_SQUARE_SCALE = 1.236
 export const READING_SQUARE_SIZE = CELL_SIZE * READING_SQUARE_SCALE
 export const CHARGE_SQUARE_SIZE = CELL_SIZE * 0.618
@@ -139,7 +139,7 @@ function mod(n: number, m: number): number {
 }
 
 function addVector(a: Position, b: Vector): Position {
-  return [mod(a[0] + b[0], 5), mod(a[1] + b[1], 5)]
+  return [mod(a[0] + b[0], GRID_SIZE), mod(a[1] + b[1], GRID_SIZE)]
 }
 
 const directionAsVector: Record<Direction, Vector> = {

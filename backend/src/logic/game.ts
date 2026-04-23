@@ -17,6 +17,9 @@ import type {
   Vector,
 } from "../types/game"
 
+const GRID_SIZE = 5;
+const WIN_CHG = 5;
+
 export function initialServerState(): ServerState {
   return {
     game: {
@@ -37,7 +40,7 @@ function mod(n: number, m: number): number {
 }
 
 function addVector(a: Position, b: Vector): Position {
-  return [mod(a[0] + b[0], 5), mod(a[1] + b[1], 5)]
+  return [mod(a[0] + b[0], GRID_SIZE), mod(a[1] + b[1], GRID_SIZE)]
 }
 
 function otherPlayer(player: Player): Player {
@@ -51,11 +54,11 @@ export function isDirection(value: unknown): value is Direction {
 export function isValidGrid(grid: unknown): grid is DirectionsGrid {
   return (
     Array.isArray(grid) &&
-    grid.length === 5 &&
+    grid.length === GRID_SIZE &&
     grid.every(
       (row) =>
         Array.isArray(row) &&
-        row.length === 5 &&
+        row.length === GRID_SIZE &&
         row.every((value) => isDirection(value))
     )
   )
@@ -141,10 +144,10 @@ function verifyCompassReading(
   const grid = grids[reader];
   const [i, j] = positions[reader];
 
-  const a = grid[i][mod(j + 1, 5)];
-  const b = grid[mod(i + 1, 5)][j];
-  const c = grid[i][mod(j - 1, 5)];
-  const d = grid[mod(i - 1, 5)][j];
+  const a = grid[i][mod(j + 1, GRID_SIZE)];
+  const b = grid[mod(i + 1, GRID_SIZE)][j];
+  const c = grid[i][mod(j - 1, GRID_SIZE)];
+  const d = grid[mod(i - 1, GRID_SIZE)][j];
   const e = grid[i][j];
 
   const counts = [0, 0, 0, 0];
@@ -342,7 +345,7 @@ export function submitReading(
     [opponent]: undefined
   };
 
-  const winner = updated.charges[player] >= 7 ? player : undefined
+  const winner = updated.charges[player] >= WIN_CHG ? player : undefined
 
   const nextGame: GameState =
     winner !== undefined

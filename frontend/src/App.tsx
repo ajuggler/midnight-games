@@ -461,12 +461,12 @@ export default function App() {
       : null
   let markerCell: Cell | undefined;
   if (
-    isInProgress &&
+    (isInProgress || isFinished) &&
     playerSlot != null &&
     positions?.[playerSlot] != null
   ) {
     const currentPosition = positions[playerSlot];
-    markerCell = existsLastReading && opponentLastReading !== undefined
+    markerCell = isInProgress && existsLastReading && opponentLastReading !== undefined
       ? cellFromPosition(
           futurePosition(currentPosition, opponentLastReading)
         )
@@ -528,13 +528,16 @@ export default function App() {
         </div>
 
         <div className="setup-summary">
-          {showSetupSummary ? (
-            <p className="description">
-              Click any square to rotate its arrow through the four compass
-              directions. You may modify up to {MAX_MODIFIED_ARROWS} directions.
-              When you are done, submit your grid.
-            </p>
-          ) : null}
+	  {showSetupSummary && (
+	    <>
+	      <p className="description">
+		Click on arrows to modify. You may modify up to {MAX_MODIFIED_ARROWS} directions.
+	      </p>
+	      <p className="description">
+		When you are done, submit your grid.
+	      </p>
+	    </>
+	  )}
           {showSetupSummary ? (
             <p className="counter" aria-live="polite">
               Modified arrows: <span>{modifiedCount}</span>
@@ -582,7 +585,7 @@ export default function App() {
             markerCell={markerCell}
             opponentCell={opponentCell}
             phantomCell={phantomCell}
-            drawPhantomMarker={existsLastReading}
+            drawPhantomMarker={isInProgress && existsLastReading}
           />
           {isInProgress ? (
             <CompassReadingControl
