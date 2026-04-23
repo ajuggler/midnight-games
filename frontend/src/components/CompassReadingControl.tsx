@@ -10,19 +10,28 @@ const READING_CANVAS_SIZE = Math.ceil(READING_SQUARE_SIZE + 28)
 
 type CompassReadingControlProps = {
   isSubmitting: boolean
+  isTurnActive: boolean
+  proofDirection?: Direction
   onSubmitReading: (direction: Direction) => void
   onSubmitChallenge: () => void
+  onSubmitProof: () => void
   showChallenge: boolean
 }
 
 export function CompassReadingControl({
   isSubmitting,
+  isTurnActive,
+  proofDirection,
   onSubmitReading,
   onSubmitChallenge,
+  onSubmitProof,
   showChallenge,
 }: CompassReadingControlProps) {
   const [direction, setDirection] = useState<Direction>(0)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const isDisabled = isSubmitting || !isTurnActive
+  const isProofMode = proofDirection !== undefined
+  const displayedDirection = proofDirection ?? direction
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -32,10 +41,18 @@ export function CompassReadingControl({
       return
     }
 
-    renderCompassReadingSquare(ctx, direction)
-  }, [direction])
+    renderCompassReadingSquare(
+      ctx,
+      displayedDirection,
+      isProofMode ? "rgb(128, 0, 2)" : undefined
+    )
+  }, [displayedDirection, isProofMode])
 
   function handleCanvasClick(event: React.MouseEvent<HTMLCanvasElement>) {
+    if (!isTurnActive || isProofMode) {
+      return
+    }
+
     const canvas = canvasRef.current
     if (!canvas) {
       return
@@ -57,34 +74,51 @@ export function CompassReadingControl({
   }
 
   return (
-    <div className="reading-panel">
-      <p className="reading-label">Compass reading</p>
+    <div className={`reading-panel${!isTurnActive ? " reading-panel-disabled" : ""}`}>
+      <p className="reading-label">{isProofMode ? "You've been challenged!" : "Compass reading"}</p>
       <canvas
         ref={canvasRef}
-        className="reading-canvas"
+        className={`reading-canvas${isProofMode ? " reading-canvas-fixed" : ""}`}
         width={READING_CANVAS_SIZE}
         height={READING_CANVAS_SIZE}
         aria-label="Compass reading selector"
         onClick={handleCanvasClick}
       />
-      <button
-        type="button"
-        className="button primary"
-        disabled={isSubmitting}
-        onClick={() => onSubmitReading(direction)}
-      >
-        {isSubmitting ? "Submitting..." : "accept & submit"}
-      </button>
-      {showChallenge ? (
+      {isProofMode ? (
         <button
           type="button"
-          className="button primary"
-          disabled={isSubmitting}
-          onClick={() => onSubmitChallenge()}
+          className={`button primary${!isTurnActive ? " turn-disabled" : ""}`}
+          disabled={isDisabled}
+          onClick={onSubmitProof}
         >
-          {isSubmitting ? "Submitting..." : "challenge"}
+          {isSubmitting ? "Submitting..." : "prove"}
         </button>
-      ) : null}
+      ) : (
+        <>
+          <button
+            type="button"
+            className={`button primary${!isTurnActive ? " turn-disabled" : ""}`}
+            disabled={isDisabled}
+            onClick={() => onSubmitReading(direction)}
+          >
+            {isSubmitting
+              ? "Submitting..."
+              : showChallenge
+                ? "accept & submit"
+                : "submit"}
+          </button>
+          {showChallenge ? (
+            <button
+              type="button"
+              className={`button primary${!isTurnActive ? " turn-disabled" : ""}`}
+              disabled={isDisabled}
+              onClick={() => onSubmitChallenge()}
+            >
+              {isSubmitting ? "Submitting..." : "challenge"}
+            </button>
+          ) : null}
+        </>
+      )}
     </div>
   )
 }

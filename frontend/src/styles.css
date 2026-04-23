@@ -228,6 +228,11 @@ h1 {
   cursor: progress;
 }
 
+.button.turn-disabled:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .button.primary {
   background: var(--primary);
   color: #fff8ea;
@@ -284,6 +289,15 @@ h1 {
   height: 152px;
   display: block;
   cursor: pointer;
+}
+
+.reading-panel-disabled .reading-canvas {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.reading-canvas-fixed {
+  cursor: default;
 }
 
 .board-actions {

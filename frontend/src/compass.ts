@@ -191,7 +191,8 @@ export function renderGrid(
 
 export function renderCompassReadingSquare(
   ctx: CanvasRenderingContext2D,
-  direction: Direction
+  direction: Direction,
+  backgroundColor = "#000000"
 ): void {
   const canvasWidth = ctx.canvas.width
   const canvasHeight = ctx.canvas.height
@@ -199,7 +200,7 @@ export function renderCompassReadingSquare(
   const squareY = (canvasHeight - READING_SQUARE_SIZE) / 2
 
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
-  ctx.fillStyle = "#000000"
+  ctx.fillStyle = backgroundColor
   ctx.fillRect(squareX, squareY, READING_SQUARE_SIZE, READING_SQUARE_SIZE)
 
   drawArrow(

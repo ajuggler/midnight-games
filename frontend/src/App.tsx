@@ -65,6 +65,10 @@ type GameStateResponse = {
     A: number
     B: number
   }
+  turn?: {
+    player: PlayerSlot
+    challenged: boolean
+  }
 }
 
 export default function App() {
@@ -91,6 +95,7 @@ export default function App() {
   })
   const [positions, setPositions] = useState<GameStateResponse["positions"]>()
   const [charges, setCharges] = useState<GameStateResponse["charges"]>()
+  const [turn, setTurn] = useState<GameStateResponse["turn"]>()
   const [joinStatus, setJoinStatus] = useState<RequestStatus>("idle")
   const [submitGridStatus, setSubmitGridStatus] = useState<RequestStatus>("idle")
   const [submitReadingStatus, setSubmitReadingStatus] =
@@ -116,6 +121,7 @@ export default function App() {
       setLastReadings(payload.lastReadings)
       setPositions(payload.positions)
       setCharges(payload.charges)
+      setTurn(payload.turn)
     } catch {
       // Keep the current UI state if polling fails temporarily.
     }
@@ -142,6 +148,7 @@ export default function App() {
 	  setLastReadings(payload.lastReadings)
           setPositions(payload.positions)
           setCharges(payload.charges)
+          setTurn(payload.turn)
         }
       } catch {
         // Keep the current UI state if polling fails temporarily.
@@ -307,6 +314,36 @@ export default function App() {
     }
   }
 
+  async function handleSubmitProof() {
+    setSubmitReadingStatus("loading")
+    setJoinStatus("idle")
+    setSubmitGridStatus("idle")
+    setResetStatus("idle")
+    setMessage("")
+    setErrorMessage("")
+
+    try {
+      const response = await fetch("/proof", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      if (!response.ok) {
+        const errorPayload = (await response.json().catch(() => ({}))) as ApiError
+        throw new Error(errorPayload.error ?? "Unable to submit proof")
+      }
+
+      setSubmitReadingStatus("success")
+      setMessage("Proof submitted successfully.")
+      void refreshPhaseTag()
+    } catch (error) {
+      setSubmitReadingStatus("error")
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unable to submit the proof"
+      )
+    }
+  }
+
   // DEBUG
   async function handleForceReset() {
     setResetStatus("loading")
@@ -342,6 +379,7 @@ export default function App() {
       })
       setPositions(undefined)
       setCharges(undefined)
+      setTurn(undefined)
       window.sessionStorage.removeItem("player-slot")
       window.sessionStorage.removeItem("player-nickname")
       setMessage("Game reset successfully.")
@@ -367,6 +405,7 @@ export default function App() {
   const isFinished = phaseTag === "Finished"
   const showSetupSummary = !isInProgress && !isFinished
   const isReadingControlBusy = isSubmitReadingBusy || isResetBusy
+  const isMyTurn = playerSlot != null && turn?.player === playerSlot
   const shouldCleanJoinRegion =
     (playerSlot === "A" && phaseTag !== null && phaseTag !== "StandBy") ||
     (playerSlot === "B" &&
@@ -379,9 +418,14 @@ export default function App() {
   const opponentLastReading = opponentSlot
     ? lastReadings?.[opponentSlot]
     : undefined
+  const myLastReading = playerSlot
+    ? lastReadings?.[playerSlot]
+    : undefined
   const existsLastReading = opponentSlot
     ? opponentLastReading !== undefined
     : false
+  const proofDirection =
+    isInProgress && isMyTurn && turn?.challenged ? myLastReading : undefined
   const myCharge = playerSlot ? charges?.[playerSlot] ?? 0 : 0
   const opponentCharge =
     opponentSlot ? charges?.[opponentSlot] ?? 0 : 0
@@ -522,8 +566,11 @@ export default function App() {
           {isInProgress ? (
             <CompassReadingControl
               isSubmitting={isReadingControlBusy}
+              isTurnActive={isMyTurn}
+              proofDirection={proofDirection}
               onSubmitReading={handleSubmitReading}
               onSubmitChallenge={handleSubmitChallenge}
+              onSubmitProof={handleSubmitProof}
               showChallenge={existsLastReading}
             />
           ) : null}
