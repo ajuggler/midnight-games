@@ -8,6 +8,7 @@ export const CHARGE_SQUARE_SIZE = CELL_SIZE * 0.618
 const SQUARE_SCALE = CELL_SIZE / Math.sqrt(2)
 const ARROW_SCALE = CELL_SIZE * 0.35
 const MARKER_COLOR = "rgb(16, 128, 128)"
+const OPPONENT_CELL_COLOR = "rgb(255, 226, 140)"
 const READING_ARROW_SCALE = READING_SQUARE_SIZE * 0.35
 const READING_HEAD_LENGTH = READING_SQUARE_SIZE * 0.14
 const READING_LINE_WIDTH = 3 * READING_SQUARE_SCALE
@@ -157,10 +158,15 @@ export function renderGrid(
   directionsState: DirectionsState,
   highlightModifiedArrows = true,
   markerCell: Cell = DEFAULT_MARKER,
+  opponentCell?: Cell,
   phantomCell: Cell = PHANTOM_MARKER,
   drawPhantomMarker = false
 ): void {
   const gridCenters = centers()
+  const highlightedIndex =
+    opponentCell !== undefined
+      ? opponentCell.i * GRID_SIZE + opponentCell.j
+      : -1
 
   ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE)
   ctx.fillStyle = "#f1ead0"
@@ -171,7 +177,9 @@ export function renderGrid(
   ctx.lineJoin = "round"
   ctx.lineWidth = 2
 
-  gridCenters.forEach((point) => {
+  gridCenters.forEach((point, index) => {
+    ctx.fillStyle =
+      index === highlightedIndex ? OPPONENT_CELL_COLOR : "rgb(254, 204, 102)"
     drawPolygon(ctx, squarePoints(point))
   })
 

@@ -470,6 +470,14 @@ export default function App() {
       ? cellFromPosition(positions[playerSlot])
       : undefined
   }
+  let opponentCell: Cell | undefined
+  if (
+    isInProgress &&
+    opponentSlot != null &&
+    positions?.[opponentSlot] != null
+  ) {
+    opponentCell = cellFromPosition(positions[opponentSlot])
+  }
 
   return (
     <main className="page">
@@ -560,6 +568,7 @@ export default function App() {
             onCellClick={handleCellClick}
             highlightModifiedArrows={!isInProgress}
             markerCell={markerCell}
+            opponentCell={opponentCell}
             phantomCell={phantomCell}
             drawPhantomMarker={existsLastReading}
           />
