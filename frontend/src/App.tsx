@@ -344,8 +344,27 @@ export default function App() {
     }
   }
 
-  // DEBUG
-  async function handleForceReset() {
+  function clearLocalGameState() {
+    setChosenNickname("")
+    setPlayerSlot(null)
+    setPhaseTag("StandBy")
+    setWinnerSlot(null)
+    setPlayers({
+      A: undefined,
+      B: undefined,
+    })
+    setLastReadings({
+      A: undefined,
+      B: undefined,
+    })
+    setPositions(undefined)
+    setCharges(undefined)
+    setTurn(undefined)
+    window.sessionStorage.removeItem("player-slot")
+    window.sessionStorage.removeItem("player-nickname")
+  }
+
+  async function handleReset(route: "/reset" | "/forcereset") {
     setResetStatus("loading")
     setJoinStatus("idle")
     setSubmitGridStatus("idle")
@@ -354,7 +373,7 @@ export default function App() {
     setErrorMessage("")
 
     try {
-      const response = await fetch("/forcereset", {
+      const response = await fetch(route, {
         method: "POST",
         credentials: "include",
       })
@@ -365,23 +384,7 @@ export default function App() {
       }
 
       setResetStatus("success")
-      setChosenNickname("")
-      setPlayerSlot(null)
-      setPhaseTag("StandBy")
-      setWinnerSlot(null)
-      setPlayers({
-        A: undefined,
-        B: undefined,
-      })
-      setLastReadings({
-        A: undefined,
-        B: undefined,
-      })
-      setPositions(undefined)
-      setCharges(undefined)
-      setTurn(undefined)
-      window.sessionStorage.removeItem("player-slot")
-      window.sessionStorage.removeItem("player-nickname")
+      clearLocalGameState()
       setMessage("Game reset successfully.")
     } catch (error) {
       setResetStatus("error")
@@ -389,6 +392,15 @@ export default function App() {
         error instanceof Error ? error.message : "Unable to reset the game"
       )
     }
+  }
+
+  async function handlePlayAgain() {
+    await handleReset("/reset")
+  }
+
+  // DEBUG
+  async function handleForceReset() {
+    await handleReset("/forcereset")
   }
 
   function handleCellClick(index: number) {
@@ -585,7 +597,7 @@ export default function App() {
           ) : null}
         </div>
 
-        {!isInProgress ? (
+        {!isInProgress && !isFinished ? (
           <div className="board-actions">
             <button
               type="button"
@@ -594,6 +606,19 @@ export default function App() {
               disabled={isBusy}
             >
               {isSubmitBusy ? "Submitting grid..." : "Submit grid"}
+            </button>
+          </div>
+        ) : null}
+
+        {isFinished ? (
+          <div className="board-actions">
+            <button
+              type="button"
+              className="button primary"
+              onClick={handlePlayAgain}
+              disabled={isBusy}
+            >
+              {isResetBusy ? "Resetting..." : "Play again"}
             </button>
           </div>
         ) : null}
