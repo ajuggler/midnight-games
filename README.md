@@ -4,7 +4,7 @@
 
 Both players start with zero *charge*, which increases or decreases as they take turns moving on a 5×5 board according to precise rules.
 
-**Objective:** the first player to reach a charge of 7 wins.
+**Objective:** the first player to reach a charge of 5 wins.
 
 *Note:* Midnight implementation is still **in progress**.
 
@@ -20,7 +20,7 @@ Setup:
 
 - both players start at the center;
 - both players start with charge 0;
-- both players begin from the same initial grid and may modify up to 9 cells.
+- both players begin from the same initial grid and may modify up to 3 cells.
 
 The game starts after both players confirm their modified cells.  Each grid remains fixed for the duration of the game. Each player can see only their own grid.
 
@@ -55,12 +55,12 @@ Charge changes as players move across the grid.
    * decreases by 1 if `D` is opposite to `M`;
    * remains unchanged if `D` is 90 degrees counterclockwise from `M`.
 
-As stated above, **the first player to reach a charge of 7 wins**.
+As stated above, **the first player to reach a charge of 5 wins**.
 
 4. Before Player A makes the move indicated by Player B's reading, Player A may challenge Player B's reading. In that case, Player B must submit a *ZK proof* attesting that the reading is correct. If verification of Player B's proof:
 
    * fails, or no proof is submitted, then Player A wins the game;
-   * succeeds, then Player A loses 2 units of charge.
+   * succeeds, then Player A loses 3 units of charge.
 
 5. Movement at the **board edges** follows the *Pac-Man* (or *toroidal*) convention: if a player is at the top edge of the board, then moving up (`N`) places the player at the bottom of the same column, and similarly for the other three edges.
 
