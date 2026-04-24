@@ -6,6 +6,8 @@ Both players start with zero *charge*, which increases or decreases as they take
 
 **Objective:** the first player to reach a charge of 7 wins.
 
+*Note:* Midnight implementation is still **in progress**.
+
 ## Game description and setup
 
 Both players begin with the same initial field of directions (`N`, `E`, `S`, and `W`) on a 5×5 square grid.
