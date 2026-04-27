@@ -1,0 +1,485 @@
+pragma language_version 0.22;
+
+import CompactStandardLibrary;
+
+export enum Phase {
+  OPEN,
+  WAITING_FOR_SECOND_PLAYER,
+  WAITING_FOR_BOARDS,
+  IN_PROGRESS,
+  FINISHED,
+  PAID
+}
+
+export enum Player {
+  NONE,
+  A,
+  B
+}
+
+export ledger playerAKey: Bytes<32>;
+export ledger playerBKey: Bytes<32>;
+
+export ledger playerAAddr: UserAddress;
+export ledger playerBAddr: UserAddress;
+
+export ledger stake: Uint<128>;
+export ledger phase: Phase;
+export ledger winner: Player;
+
+// Hidden-board commitments are stored as ledger Merkle trees so the contract
+// can validate setup and gameplay against private openings.
+export ledger boardA: MerkleTree<5, Bytes<32>>;
+export ledger boardB: MerkleTree<5, Bytes<32>>;
+
+export ledger boardACommittedCount: Counter;
+export ledger boardBCommittedCount: Counter;
+export ledger boardAModCount: Counter;
+export ledger boardBModCount: Counter;
+export ledger boardAReady: Boolean;
+export ledger boardBReady: Boolean;
+
+export ledger rowA: Uint<8>;
+export ledger colA: Uint<8>;
+export ledger rowB: Uint<8>;
+export ledger colB: Uint<8>;
+
+export ledger chargeA: Uint<8>;
+export ledger chargeB: Uint<8>;
+
+export ledger readingA: Uint<8>;
+export ledger readingB: Uint<8>;
+export ledger hasReadingA: Boolean;
+export ledger hasReadingB: Boolean;
+
+export ledger turnPlayer: Player;
+export ledger challenged: Boolean;
+
+witness localSk(): Bytes<32>;
+witness dirAt(idx: Uint<8>): Uint<8>;
+witness saltAt(idx: Uint<8>): Bytes<32>;
+witness boardPath(idx: Uint<8>, leaf: Bytes<32>): MerkleTreePath<5, Bytes<32>>;
+
+constructor() {
+  phase = Phase.OPEN;
+  winner = Player.NONE;
+  turnPlayer = Player.NONE;
+  challenged = false;
+  boardAReady = false;
+  boardBReady = false;
+  hasReadingA = false;
+  hasReadingB = false;
+}
+
+circuit dappPublicKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "counterfeit-compass:pk"),
+    sk
+  ]);
+}
+
+circuit currentPlayer(): Player {
+  const pk = dappPublicKey(localSk());
+
+  if (playerAKey == pk) {
+    return Player.A;
+  }
+  if (playerBKey == pk) {
+    return Player.B;
+  }
+
+  return Player.NONE;
+}
+
+circuit otherPlayer(p: Player): Player {
+  return p == Player.A ? Player.B : Player.A;
+}
+
+circuit leafCommit(idx: Uint<8>, dir: Uint<8>, salt: Bytes<32>): Bytes<32> {
+  assert(dir < 4, "direction out of range");
+  return persistentCommit<Vector<2, Uint<8>>>([idx, dir], salt);
+}
+
+circuit idxOf(r: Uint<8>, c: Uint<8>): Uint<8> {
+  return (r * 5 + c) as Uint<8>;
+}
+
+circuit up(r: Uint<8>): Uint<8> {
+  return r == 0 ? 4 as Uint<8> : r - 1;
+}
+
+circuit down(r: Uint<8>): Uint<8> {
+  return r == 4 ? 0 as Uint<8> : r + 1;
+}
+
+circuit left(c: Uint<8>): Uint<8> {
+  return c == 0 ? 4 as Uint<8> : c - 1;
+}
+
+circuit right(c: Uint<8>): Uint<8> {
+  return c == 4 ? 0 as Uint<8> : c + 1;
+}
+
+circuit initialDirection(idx: Uint<8>): Uint<8> {
+  assert(idx < 25, "bad idx");
+
+  if (idx == 0) { return 3; }
+  if (idx == 1) { return 3; }
+  if (idx == 2) { return 0; }
+  if (idx == 3) { return 0; }
+  if (idx == 4) { return 0; }
+
+  if (idx == 5) { return 3; }
+  if (idx == 6) { return 3; }
+  if (idx == 7) { return 0; }
+  if (idx == 8) { return 0; }
+  if (idx == 9) { return 0; }
+
+  if (idx == 10) { return 3; }
+  if (idx == 11) { return 3; }
+  if (idx == 12) { return 1; }
+  if (idx == 13) { return 1; }
+  if (idx == 14) { return 1; }
+
+  if (idx == 15) { return 2; }
+  if (idx == 16) { return 2; }
+  if (idx == 17) { return 2; }
+  if (idx == 18) { return 1; }
+  if (idx == 19) { return 1; }
+
+  if (idx == 20) { return 2; }
+  if (idx == 21) { return 2; }
+  if (idx == 22) { return 2; }
+  if (idx == 23) { return 1; }
+  if (idx == 24) { return 1; }
+
+  assert(false, "unreachable");
+  return 0;
+}
+
+circuit openBoardACell(idx: Uint<8>): Uint<8> {
+  const d = dirAt(idx);
+  const s = saltAt(idx);
+  const leaf = leafCommit(idx, d, s);
+  const path = boardPath(idx, leaf);
+
+  assert(
+    boardA.checkRoot(merkleTreePathRoot<5, Bytes<32>>(path)),
+    "invalid board A path"
+  );
+
+  return d;
+}
+
+circuit openBoardBCell(idx: Uint<8>): Uint<8> {
+  const d = dirAt(idx);
+  const s = saltAt(idx);
+  const leaf = leafCommit(idx, d, s);
+  const path = boardPath(idx, leaf);
+
+  assert(
+    boardB.checkRoot(merkleTreePathRoot<5, Bytes<32>>(path)),
+    "invalid board B path"
+  );
+
+  return d;
+}
+
+circuit directionVerify(
+  a: Uint<8>,
+  b: Uint<8>,
+  c: Uint<8>,
+  d: Uint<8>,
+  e: Uint<8>,
+  x: Uint<8>
+): Boolean {
+  assert(a < 4 && b < 4 && c < 4 && d < 4 && e < 4 && x < 4, "bad dir");
+
+  return
+    (a == b &&
+      ((d == c &&
+        ((a == d && a == x) ||
+          (a != d && e == x))) ||
+        (d != c && a == x))) ||
+    (a != b &&
+      ((a == d &&
+        ((c == b && e == x) ||
+          (c != b && a == x))) ||
+        (a != d &&
+          ((a == c &&
+            ((d == b && e == x) ||
+              (d != b && a == x))) ||
+            (a != c &&
+              (((b == c || b == d) && b == x) ||
+                ((b != c && b != d) &&
+                  ((c == d && c == x) ||
+                   (c != d && e == x))))))));
+}
+
+circuit clockwise(m: Uint<8>): Uint<8> {
+  assert(m < 4, "bad movement");
+  return m == 3 ? 0 as Uint<8> : m + 1;
+}
+
+circuit opposite(m: Uint<8>): Uint<8> {
+  assert(m < 4, "bad movement");
+  return m < 2 ? m + 2 : m - 2;
+}
+
+circuit adjustCharge(charge: Uint<8>, movement: Uint<8>, destDir: Uint<8>): Uint<8> {
+  assert(movement < 4 && destDir < 4, "bad dir");
+
+  if (destDir == movement) {
+    return charge + 2;
+  }
+  if (destDir == clockwise(movement)) {
+    return charge + 1;
+  }
+  if (destDir == opposite(movement)) {
+    return charge == 0 ? 0 as Uint<8> : charge - 1;
+  }
+
+  return charge;
+}
+
+circuit minus3OrZero(x: Uint<8>): Uint<8> {
+  return x > 2 ? x - 3 : 0 as Uint<8>;
+}
+
+export circuit join(amount: Uint<128>, payout: UserAddress): [] {
+  const pk = dappPublicKey(localSk());
+
+  assert(phase == Phase.OPEN || phase == Phase.WAITING_FOR_SECOND_PLAYER, "bad phase");
+
+  receiveUnshielded(nativeToken(), disclose(amount));
+
+  if (phase == Phase.OPEN) {
+    playerAKey = disclose(pk);
+    playerAAddr = disclose(payout);
+    stake = disclose(amount);
+    phase = Phase.WAITING_FOR_SECOND_PLAYER;
+    return;
+  }
+
+  assert(playerAKey != pk, "cannot play against yourself");
+  assert(disclose(amount) == stake, "stake mismatch");
+
+  playerBKey = disclose(pk);
+  playerBAddr = disclose(payout);
+  phase = Phase.WAITING_FOR_BOARDS;
+}
+
+export circuit commitMyNextBoardCell(): [] {
+  assert(phase == Phase.WAITING_FOR_BOARDS, "bad phase");
+
+  const me = currentPlayer();
+  assert(me == Player.A || me == Player.B, "not a player");
+
+  if (me == Player.A) {
+    assert(!boardAReady, "board A already finalized");
+    assert(boardACommittedCount < 25, "board A full");
+
+    const idx = boardACommittedCount as Uint<8>;
+    const d = dirAt(idx);
+    const s = saltAt(idx);
+    const leaf = leafCommit(idx, d, s);
+
+    boardA.insertHashIndex(leaf, idx as Uint<64>);
+    boardACommittedCount += 1;
+
+    if (d != initialDirection(idx)) {
+      boardAModCount += 1;
+    }
+
+    return;
+  }
+
+  assert(!boardBReady, "board B already finalized");
+  assert(boardBCommittedCount < 25, "board B full");
+
+  const idx = boardBCommittedCount as Uint<8>;
+  const d = dirAt(idx);
+  const s = saltAt(idx);
+  const leaf = leafCommit(idx, d, s);
+
+  boardB.insertHashIndex(leaf, idx as Uint<64>);
+  boardBCommittedCount += 1;
+
+  if (d != initialDirection(idx)) {
+    boardBModCount += 1;
+  }
+}
+
+export circuit finalizeMyBoard(): [] {
+  assert(phase == Phase.WAITING_FOR_BOARDS, "bad phase");
+
+  const me = currentPlayer();
+  assert(me == Player.A || me == Player.B, "not a player");
+
+  if (me == Player.A) {
+    assert(boardACommittedCount == 25, "board A incomplete");
+    assert(boardAModCount <= 3, "board A has too many modifications");
+    boardAReady = true;
+  } else {
+    assert(boardBCommittedCount == 25, "board B incomplete");
+    assert(boardBModCount <= 3, "board B has too many modifications");
+    boardBReady = true;
+  }
+
+  if (boardAReady && boardBReady) {
+    rowA = 2;
+    colA = 2;
+    rowB = 2;
+    colB = 2;
+    chargeA = 0;
+    chargeB = 0;
+    hasReadingA = false;
+    hasReadingB = false;
+    turnPlayer = Player.A;
+    challenged = false;
+    phase = Phase.IN_PROGRESS;
+  }
+}
+
+export circuit play(myReading: Uint<8>): [] {
+  assert(phase == Phase.IN_PROGRESS, "bad phase");
+  assert(!challenged, "pending challenge");
+  assert(myReading < 4, "bad reading");
+
+  const me = currentPlayer();
+  assert(me == turnPlayer, "not your turn");
+
+  if (me == Player.A) {
+    if (hasReadingB) {
+      const movement = readingB;
+      assert(movement < 4, "bad reading B");
+
+      if (movement == 0) { rowA = up(rowA); }
+      if (movement == 1) { colA = right(colA); }
+      if (movement == 2) { rowA = down(rowA); }
+      if (movement == 3) { colA = left(colA); }
+
+      const destIdx = idxOf(rowA, colA);
+      const destDir = openBoardACell(destIdx);
+      chargeA = adjustCharge(chargeA, movement, destDir);
+
+      hasReadingB = false;
+    }
+
+    if (chargeA >= 5) {
+      phase = Phase.FINISHED;
+      winner = Player.A;
+      hasReadingA = false;
+      hasReadingB = false;
+      return;
+    }
+
+    readingA = disclose(myReading);
+    hasReadingA = true;
+    turnPlayer = Player.B;
+    return;
+  }
+
+  if (hasReadingA) {
+    const movement = readingA;
+    assert(movement < 4, "bad reading A");
+
+    if (movement == 0) { rowB = up(rowB); }
+    if (movement == 1) { colB = right(colB); }
+    if (movement == 2) { rowB = down(rowB); }
+    if (movement == 3) { colB = left(colB); }
+
+    const destIdx = idxOf(rowB, colB);
+    const destDir = openBoardBCell(destIdx);
+    chargeB = adjustCharge(chargeB, movement, destDir);
+
+    hasReadingA = false;
+  }
+
+  if (chargeB >= 5) {
+    phase = Phase.FINISHED;
+    winner = Player.B;
+    hasReadingA = false;
+    hasReadingB = false;
+    return;
+  }
+
+  readingB = disclose(myReading);
+  hasReadingB = true;
+  turnPlayer = Player.A;
+}
+
+export circuit challenge(): [] {
+  assert(phase == Phase.IN_PROGRESS, "bad phase");
+  assert(!challenged, "already challenged");
+
+  const me = currentPlayer();
+  assert(me == turnPlayer, "not your turn");
+
+  if (me == Player.A) {
+    assert(hasReadingB, "nothing to challenge");
+    turnPlayer = Player.B;
+    challenged = true;
+    return;
+  }
+
+  assert(hasReadingA, "nothing to challenge");
+  turnPlayer = Player.A;
+  challenged = true;
+}
+
+export circuit proveMyReading(): [] {
+  assert(phase == Phase.IN_PROGRESS, "bad phase");
+  assert(challenged, "no pending challenge");
+
+  const me = currentPlayer();
+  assert(me == turnPlayer, "not your proof turn");
+
+  if (me == Player.A) {
+    assert(hasReadingA, "no A reading to prove");
+
+    const a = openBoardACell(idxOf(up(rowA), colA));
+    const b = openBoardACell(idxOf(rowA, right(colA)));
+    const c = openBoardACell(idxOf(down(rowA), colA));
+    const d = openBoardACell(idxOf(rowA, left(colA)));
+    const e = openBoardACell(idxOf(rowA, colA));
+
+    assert(directionVerify(a, b, c, d, e, readingA), "incorrect direction");
+
+    chargeB = minus3OrZero(chargeB);
+    turnPlayer = Player.B;
+    challenged = false;
+    return;
+  }
+
+  assert(hasReadingB, "no B reading to prove");
+
+  const a = openBoardBCell(idxOf(up(rowB), colB));
+  const b = openBoardBCell(idxOf(rowB, right(colB)));
+  const c = openBoardBCell(idxOf(down(rowB), colB));
+  const d = openBoardBCell(idxOf(rowB, left(colB)));
+  const e = openBoardBCell(idxOf(rowB, colB));
+
+  assert(directionVerify(a, b, c, d, e, readingB), "incorrect direction");
+
+  chargeA = minus3OrZero(chargeA);
+  turnPlayer = Player.A;
+  challenged = false;
+}
+
+export circuit claimPot(): [] {
+  assert(phase == Phase.FINISHED, "bad phase");
+  assert(winner == Player.A || winner == Player.B, "no winner");
+
+  const me = currentPlayer();
+  assert(me == winner, "only winner can claim");
+
+  const payout = stake + stake;
+  const recipient =
+    winner == Player.A
+      ? right<ContractAddress, UserAddress>(playerAAddr)
+      : right<ContractAddress, UserAddress>(playerBAddr);
+
+  sendUnshielded(nativeToken(), payout, recipient);
+  phase = Phase.PAID;
+}

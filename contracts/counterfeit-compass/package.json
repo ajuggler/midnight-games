@@ -1,0 +1,10 @@
+{
+  "name": "counterfeit-compass-contract",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Midnight Compact contract workspace for Counterfeit Compass",
+  "scripts": {
+    "build": "echo \"Wire this script to the Midnight Compact toolchain scaffold for your environment.\"",
+    "check": "echo \"Add compactc or the generated Midnight workspace commands here once the scaffold is installed.\""
+  }
+}

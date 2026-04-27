@@ -65,6 +65,31 @@ input {
   text-align: center;
 }
 
+.mode-panel {
+  width: min(100%, 680px);
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid rgba(23, 59, 147, 0.14);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.mode-label {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.mode-description {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
 .eyebrow {
   margin: 0 0 8px;
   font-size: 0.78rem;
@@ -99,6 +124,16 @@ h1 {
   font-size: 0.95rem;
   line-height: 1.5;
   color: var(--text-soft);
+}
+
+.private-note {
+  margin: 14px auto 0;
+  max-width: 680px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(23, 59, 147, 0.08);
+  color: #1e376e;
+  line-height: 1.55;
 }
 
 .join-panel {
@@ -264,6 +299,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .play-surface.in-progress {

@@ -82,6 +82,21 @@ export function gridFromDirections(directionsState: DirectionsState): Directions
   return grid
 }
 
+export function idxOf(i: number, j: number): number {
+  return GRID_SIZE * i + j
+}
+
+export function directionAtIndex(
+  directionsState: DirectionsState,
+  index: number
+): Direction {
+  return directionsState[index]
+}
+
+export function randomSalt32(): Uint8Array {
+  return crypto.getRandomValues(new Uint8Array(32))
+}
+
 export function cycleDirectionAt(
   directionsState: DirectionsState,
   index: number

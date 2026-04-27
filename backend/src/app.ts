@@ -9,10 +9,17 @@ export function createApp() {
   const app = express()
   const frontendDistPath = path.resolve(__dirname, "../../frontend/dist")
   const frontendIndexPath = path.join(frontendDistPath, "index.html")
+  const gameMode = process.env.COMPASS_GAME_MODE === "midnight"
+    ? "midnight"
+    : "backend"
 
   app.use(express.json())
-  app.use(sessionMiddleware)
-  app.use(createGameRouter())
+
+  if (gameMode === "backend") {
+    app.use(sessionMiddleware)
+    app.use(createGameRouter())
+  }
+
   app.use(express.static(frontendDistPath))
   app.get("*", (_req, res) => {
     if (!fs.existsSync(frontendIndexPath)) {
