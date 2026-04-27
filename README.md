@@ -6,6 +6,50 @@ Both players start with zero *charge*, which increases or decreases as they take
 
 **Objective:** the first player to reach a charge of 5 wins.
 
+## Runtime modes
+
+There are currently two ways to run the game:
+
+### Backend mode (default)
+
+Uses a trusted Express referee.
+
+1. Install dependencies:
+   `npm --prefix frontend install`
+   `npm --prefix backend install`
+2. In one terminal, rebuild the frontend on changes:
+   `npm --prefix backend run dev:frontend`
+3. In another terminal, launch the backend:
+   `npm --prefix backend run dev`
+4. Open `http://localhost:3000`.
+
+### Midnight mode
+
+This serves the same React app, but expects the trust-critical game flow to come from a Midnight contract/client adapter instead of the backend referee.
+
+1. Install dependencies:
+   `npm --prefix frontend install`
+   `npm --prefix backend install`
+2. Set the required frontend environment variables before building:
+   `VITE_GAME_MODE=midnight`
+   `VITE_MIDNIGHT_STAKE=<stake>`
+   `VITE_MIDNIGHT_PAYOUT_ADDRESS=<payout-address>`
+3. Wire the generated Midnight bindings/adapter into [`frontend/src/midnight/contract.ts`](./frontend/src/midnight/contract.ts).
+4. In one terminal, rebuild the frontend on changes with the Midnight env vars set:
+   `VITE_GAME_MODE=midnight VITE_MIDNIGHT_STAKE=<stake> VITE_MIDNIGHT_PAYOUT_ADDRESS=<payout-address> npm --prefix backend run dev:frontend`
+5. In another terminal, launch the backend as a static-file host:
+   `COMPASS_GAME_MODE=midnight npm --prefix backend run dev`
+6. Open `http://localhost:3000`.
+
+### About Midnight client layer
+
+This repository has a small Midnight client layer under [`frontend/src/midnight`](./frontend/src/midnight). It is responsible for:
+
+- keeping each player's private board, salts, and local Merkle-tree mirror in browser-local storage;
+- preparing witnesses for Compact circuits;
+- mapping contract ledger state into the UI state used by the React app;
+- replacing the "trusted" backend routes with Midnight transaction/query wrappers when Midnight mode is enabled.
+
 ## Game description and setup
 
 Both players begin with the same initial field of directions (`N`, `E`, `S`, and `W`) on a 5×5 square grid.
