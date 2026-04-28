@@ -1,4 +1,16 @@
-# Counterfeit Compass
+# Midnight Games
+
+This repository is an ongoing project exploring how games built on Midnight can model real-world human interactions in which selective disclosure and zero-knowledge proofs play an important role. Midnight is described in its [developer documentation](https://docs.midnight.network/) as a privacy-first blockchain focused on selective disclosure, zero-knowledge proofs, and confidential data handling.
+
+Our first project is [**Counterfeit Compass**](#counterfeit-compass), described below.
+
+Possible directions for future development include:
+
+* hidden-alliance games
+* anti-coercion governance games
+* credential-and-bluff games
+
+## Counterfeit Compass
 
 *Counterfeit Compass* is a two-player game of incomplete information in which bluffing is possible, but risky: a challenged claim must be backed by a ZK proof, and verification failure is fatal.
 
@@ -6,11 +18,11 @@ Both players start with zero *charge*, which increases or decreases as they take
 
 **Objective:** the first player to reach a charge of 5 wins.
 
-## Runtime modes
+### Runtime modes
 
 There are currently two ways to run the game:
 
-### Backend mode (default)
+#### Backend mode (default)
 
 Uses a trusted Express referee.
 
@@ -23,7 +35,7 @@ Uses a trusted Express referee.
    `npm --prefix backend run dev`
 4. Open `http://localhost:3000`.
 
-### Midnight mode
+#### Midnight mode
 
 This serves the same React app, but expects the trust-critical game flow to come from a Midnight contract/client adapter instead of the backend referee.
 
@@ -41,7 +53,7 @@ This serves the same React app, but expects the trust-critical game flow to come
    `COMPASS_GAME_MODE=midnight npm --prefix backend run dev`
 6. Open `http://localhost:3000`.
 
-### About Midnight client layer
+#### About Midnight client layer
 
 This repository has a small Midnight client layer under [`frontend/src/midnight`](./frontend/src/midnight). It is responsible for:
 
@@ -50,7 +62,7 @@ This repository has a small Midnight client layer under [`frontend/src/midnight`
 - mapping contract ledger state into the UI state used by the React app;
 - replacing the "trusted" backend routes with Midnight transaction/query wrappers when Midnight mode is enabled.
 
-## Game description and setup
+### Game description and setup
 
 Both players begin with the same initial field of directions (`N`, `E`, `S`, and `W`) on a 5×5 square grid.
 
@@ -70,7 +82,7 @@ Example: each player has chosen a grid of directions (modified directions shown 
 
 ![two boards with modified directions](./figs/players.png)
 
-## Position and dominant direction
+### Position and dominant direction
 
 A player's position determines a *dominant direction*, defined as the most frequent direction among the arrows immediately above, to the right, below, and to the left of the player's current position.
 
@@ -78,7 +90,7 @@ If there is a tie among these four arrows, the *dominant direction* is the direc
 
 The *dominant direction* of one player determines the movement of the other player, as explained below.
 
-## Movement and charge
+### Movement and charge
 
 Charge changes as players move across the grid.
 
